@@ -1,7 +1,7 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   generateApiKey,
   rotateApiKey,
@@ -28,7 +28,9 @@ export const DEFAULT_WEB_PORT = 3100;
  * - `/dashboard`  (dashboard) Overview, API Keys Vault (/keys), Job Inspector (/logs), Webhooks/CORS (/webhooks), Billing (/billing)
  */
 export function createWebAppServer({ port = Number(process.env.PORT || DEFAULT_WEB_PORT) } = {}) {
-  const webOrigin = `http://localhost:${port}`;
+  const defaultWebOrigin = process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : `http://localhost:${port}`;
   const otpManager = new SmsOtpManager();
 
   // Seed default UK Sandbox Tenant State for immediate interactive demonstration
@@ -48,7 +50,7 @@ export function createWebAppServer({ port = Number(process.env.PORT || DEFAULT_W
       pagesUsedThisMonth: 14,
       jobsUsedThisMonth: 9,
       firstApiCallAt: new Date(Date.now() - 42000).toISOString(),
-      allowedOrigins: [webOrigin, "https://app.conservatoire.ac.uk"]
+      allowedOrigins: [defaultWebOrigin, "https://app.conservatoire.ac.uk"]
     },
     user: {
       id: "usr_london_01",
@@ -145,7 +147,15 @@ export function createWebAppServer({ port = Number(process.env.PORT || DEFAULT_W
   }
 
   const requestListener = async (req, res) => {
-    const url = new URL(req.url || "/", webOrigin);
+    const reqHost = req.headers?.host;
+    const reqProto = String(req.headers?.["x-forwarded-proto"] || "http").split(",")[0].trim();
+    const reqOrigin = reqHost ? `${reqProto}://${reqHost}` : defaultWebOrigin;
+    const url = new URL(req.url || "/", reqOrigin);
+
+    if (req.method === "GET" && url.pathname === "/health") {
+      sendJson(res, 200, { status: "ok", service: "linnet-score-web" });
+      return;
+    }
 
     // Static CSS & Web Component SDK bundles
     if (url.pathname === "/styles.css") {
@@ -301,7 +311,7 @@ export function createWebAppServer({ port = Number(process.env.PORT || DEFAULT_W
 
     // Route Group 3: (dashboard) B2B & Music School Tenant Control Plane
     if (url.pathname === "/dashboard") {
-      sendHtml(res, renderDashboardPage(state, webOrigin));
+      sendHtml(res, renderDashboardPage(state, reqOrigin));
       return;
     }
 
@@ -318,11 +328,15 @@ export function createWebAppServer({ port = Number(process.env.PORT || DEFAULT_W
   };
 
   const server = http.createServer(requestListener);
-  server.dispatchRequest = async ({ method = "GET", path = "/", body = null }) => {
+  server.dispatchRequest = async ({ method = "GET", path = "/", body = null, headers: reqHeaders = {} }) => {
     const payload = body ? JSON.stringify(body) : "";
+    const normalizedHeaders = Object.fromEntries(
+      Object.entries(reqHeaders).map(([k, v]) => [k.toLowerCase(), v])
+    );
     const req = {
       method,
       url: path,
+      headers: normalizedHeaders,
       socket: { remoteAddress: "127.0.0.1" },
       on(event, cb) {
         if (event === "data" && payload) cb(Buffer.from(payload, "utf8"));
@@ -1246,8 +1260,9 @@ function renderStudentPracticePage(state, jobId, presetKey) {
 </html>`;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const port = Number(process.env.PORT || DEFAULT_WEB_PORT);
+  const host = process.env.HOST || "0.0.0.0";
   const server = createWebAppServer({ port });
   server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {
@@ -1256,7 +1271,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     }
     throw err;
   });
-  server.listen(port, () => {
-    console.log(`[Linnet Score Web Control Plane] Running on http://localhost:${port}`);
+  server.listen(port, host, () => {
+    const displayHost = host === "0.0.0.0" ? "localhost" : host;
+    console.log(`[Linnet Score Web Control Plane] Running on http://${displayHost}:${port}`);
   });
 }

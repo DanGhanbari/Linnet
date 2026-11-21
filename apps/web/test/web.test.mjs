@@ -94,4 +94,19 @@ test("Phase 2 & 3 Exit Gates: Landing Page Playground, SMS OTP Auth + 60s Sandbo
   assert.equal(waitlistRes.status, 200);
   const waitlistData = waitlistRes.json();
   assert.equal(waitlistData.registered, true);
+
+  // 8. Verify Railway healthcheck & forwarded Host origin resolution
+  const healthRes = await server.dispatchRequest({ method: "GET", path: "/health" });
+  assert.equal(healthRes.status, 200);
+  assert.deepEqual(healthRes.json(), { status: "ok", service: "linnet-score-web" });
+
+  const proxiedDashRes = await server.dispatchRequest({
+    method: "GET",
+    path: "/dashboard",
+    headers: { host: "linnet-demo.up.railway.app", "x-forwarded-proto": "https" }
+  });
+  assert.equal(proxiedDashRes.status, 200);
+  assert.ok(
+    proxiedDashRes.text().includes("https://linnet-demo.up.railway.app/practice/job_01j8x9k2m4p7q?preset=solo_piano")
+  );
 });
