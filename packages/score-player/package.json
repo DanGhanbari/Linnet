@@ -1,0 +1,15 @@
+{
+  "name": "@linnet-score/score-player",
+  "version": "1.0.0",
+  "description": "Linnet Score <linnet-score-player> Zero-Dependency Web Component SDK (Score Viewer S-05 + Web Audio Playback S-06)",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./element": "./src/linnet-score-player.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}
+

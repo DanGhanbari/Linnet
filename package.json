@@ -1,0 +1,22 @@
+{
+  "name": "linnet-score-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Linnet Score — B2B Optical Music Recognition (OMR) API & Embeddable Score SDK Platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start:web": "node apps/web/server.mjs",
+    "start:gateway": "cd apps/gateway && go run ./cmd/gateway",
+    "test:gateway": "cd apps/gateway && go test -v ./...",
+    "test:db": "node --test packages/database/test/*.test.mjs",
+    "test:sdk": "node --test packages/score-player/test/*.test.mjs",
+    "test:web": "node --test apps/web/test/*.test.mjs",
+    "test": "npm run test:gateway && npm run test:db && npm run test:sdk && npm run test:web"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@linnet-score/web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Linnet Score — Commercial Website, Interactive OMR Playground, SMS OTP + Passkey Auth, and B2B Tenant Dashboard",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
+

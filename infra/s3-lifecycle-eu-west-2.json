@@ -1,0 +1,37 @@
+{
+  "Comment": "Charter Decision D-07 & Deliverable S-10: UK GDPR 24-Hour Auto-Deletion Lifecycle Policy for eu-west-2 (London) ephemeral OMR bucket",
+  "Region": "eu-west-2",
+  "Bucket": "linnet-score-ephemeral-eu-west-2",
+  "Rules": [
+    {
+      "ID": "uk-gdpr-ephemeral-24h-input-deletion",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "inputs/"
+      },
+      "Expiration": {
+        "Days": 1
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    },
+    {
+      "ID": "uk-gdpr-ephemeral-24h-output-deletion",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "outputs/"
+      },
+      "Expiration": {
+        "Days": 1
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+      }
+    }
+  ]
+}
+

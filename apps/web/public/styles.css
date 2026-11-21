@@ -1,0 +1,294 @@
+/* ==========================================================================
+   Linnet Score — Editorial Typography & Design Tokens
+   ========================================================================== */
+
+/* Fontshare CDN for Chillax (Modern geometric display sans) + Google Fonts for Figtree & JetBrains Mono */
+@import url('https://api.fontshare.com/v2/css?f[]=chillax@300,400,500,600,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Lush & Nude Original Editorial Palette */
+  --bg-alabaster: #FAF6F0;
+  --bg-cashmere: #F2EAE1;
+  --border-sandstone: #E4D6C8;
+  --accent-taupe: #C8B29E;
+  --brand-cypress: #1B3B2B;
+  --accent-moss: #2E5A44;
+  --text-obsidian: #1C1917;
+  --text-umber: #655B52;
+  --status-sage: #2D6A4F;
+  --status-ochre: #D97706;
+  --status-terracotta: #B91C1C;
+
+  /* Typography Tokens: Chillax (Modern Geometric Display) + Figtree (UI Sans) + JetBrains Mono (Code/Metrics) */
+  --font-display: 'Chillax', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-alabaster);
+  color: var(--text-obsidian);
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Score Titles & Hero Headers */
+h1, h2, .score-title, .font-serif {
+  font-family: var(--font-display);
+  color: var(--text-obsidian);
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  line-height: 1.1;
+  margin-top: 0;
+}
+
+/* Main UI & Controls */
+button, input, select {
+  font-family: var(--font-sans);
+  color: var(--text-obsidian);
+}
+
+/* Live Scores, BPM, Timecodes & Metrics */
+.score-counter, .metric-value, .font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--brand-cypress);
+  font-weight: 600;
+}
+
+code, pre {
+  font-family: var(--font-mono);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Top Navigation */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(250, 246, 240, 0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-sandstone);
+}
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text-obsidian);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.brand-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-cashmere);
+  border: 1px solid var(--border-sandstone);
+  color: var(--brand-cypress);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: var(--text-umber);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.nav-link:hover, .nav-link[aria-current="page"] {
+  color: var(--text-obsidian);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+  border: 1px solid transparent;
+}
+
+.btn-cypress {
+  background: var(--brand-cypress);
+  color: var(--bg-alabaster);
+  border-color: var(--brand-cypress);
+}
+
+.btn-cypress:hover {
+  background: var(--accent-moss);
+  border-color: var(--accent-moss);
+}
+
+.btn-sandstone {
+  background: var(--bg-cashmere);
+  color: var(--text-obsidian);
+  border-color: var(--border-sandstone);
+}
+
+.btn-sandstone:hover {
+  background: var(--border-sandstone);
+}
+
+/* Cards & Surfaces */
+.cashmere-card {
+  background: var(--bg-cashmere);
+  border: 1px solid var(--border-sandstone);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.alabaster-panel {
+  background: var(--bg-alabaster);
+  border: 1px solid var(--border-sandstone);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+/* Status Pills */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.status-sage {
+  background: rgba(45, 106, 79, 0.12);
+  color: var(--status-sage);
+}
+
+.status-ochre {
+  background: rgba(217, 119, 6, 0.14);
+  color: var(--status-ochre);
+}
+
+.status-terracotta {
+  background: rgba(185, 28, 28, 0.12);
+  color: var(--status-terracotta);
+}
+
+/* Split-Pane Playground & Auth Grid */
+.split-grid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .split-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Data Tables */
+.linnet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.linnet-table th {
+  text-align: left;
+  padding: 12px 14px;
+  color: var(--text-umber);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-sandstone);
+}
+
+.linnet-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border-sandstone);
+}
+
+.linnet-table tr:hover td {
+  background: rgba(250, 246, 240, 0.55);
+}
+
+/* 6-Digit SMS OTP Input Slots */
+.otp-slots {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.otp-slot {
+  width: 44px;
+  height: 52px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 600;
+  border: 1.5px solid var(--border-sandstone);
+  border-radius: 10px;
+  background: var(--bg-alabaster);
+  color: var(--text-obsidian);
+}
+
+.otp-slot:focus {
+  outline: 2px solid var(--brand-cypress);
+  border-color: var(--brand-cypress);
+}
+
+/* Native <dialog closedby="any"> Modal Styling (Modern Web Guidance light-dismiss-a-dialog) */
+dialog.linnet-dialog {
+  background: var(--bg-cashmere);
+  color: var(--text-obsidian);
+  border: 1px solid var(--border-sandstone);
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 560px;
+  width: calc(100% - 32px);
+  box-shadow: 0 24px 48px rgba(28, 25, 23, 0.18);
+}
+
+dialog.linnet-dialog::backdrop {
+  background-color: rgba(28, 25, 23, 0.48);
+  backdrop-filter: blur(3px);
+}
+
