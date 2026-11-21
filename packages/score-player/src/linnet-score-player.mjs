@@ -22,6 +22,9 @@ const PLAYER_CSS = `
   --_text-umber: var(--linnet-text-umber, #655B52);
 
   display: block;
+  container-type: inline-size;
+  min-inline-size: 0;
+  max-inline-size: 100%;
   font-family: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--_text-obsidian);
   background: var(--_bg-alabaster);
@@ -39,6 +42,13 @@ button, input, select {
   color: inherit;
 }
 
+button:focus-visible,
+input:focus-visible,
+.score-canvas:focus-visible {
+  outline: 2px solid var(--_brand-cypress);
+  outline-offset: 2px;
+}
+
 .player-shell {
   display: flex;
   flex-direction: column;
@@ -51,7 +61,8 @@ button, input, select {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 250px;
+  min-block-size: 230px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .score-canvas svg {
@@ -134,6 +145,53 @@ button, input, select {
   border: 1px solid var(--_border-sandstone);
   color: var(--_text-umber);
 }
+
+@container (max-width: 640px) {
+  .score-canvas {
+    justify-content: flex-start;
+    padding: 12px;
+  }
+
+  .score-canvas svg {
+    min-inline-size: 620px;
+    max-inline-size: none;
+    height: auto;
+  }
+}
+
+@container (max-width: 560px) {
+  .transport-bar {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .transport-group {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .tempo-control {
+    flex: 1 1 100%;
+  }
+
+  .tempo-slider {
+    flex: 1;
+    min-inline-size: 110px;
+  }
+}
+
+@media (pointer: coarse) {
+  .btn-primary,
+  .btn-secondary {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+    padding: 10px 14px;
+  }
+
+  .tempo-slider {
+    min-block-size: 44px;
+  }
+}
 `;
 
 let sharedStyleSheet = null;
@@ -152,7 +210,7 @@ export function defineLinnetScorePlayer() {
   const template = document.createElement("template");
   template.innerHTML = `
     <div class="player-shell">
-      <div class="score-canvas" part="canvas" data-canvas></div>
+      <div class="score-canvas" part="canvas" data-canvas tabindex="0" role="region" aria-label="Scrollable musical score notation"></div>
       <div class="transport-bar" part="transport" role="toolbar" aria-label="Score playback controls">
         <div class="transport-group">
           <button type="button" class="btn-primary" data-action="play-toggle" aria-label="Play or pause score">▶ Play Score</button>

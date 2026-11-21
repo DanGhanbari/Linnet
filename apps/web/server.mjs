@@ -299,7 +299,7 @@ export function createWebAppServer({ port = Number(process.env.PORT || DEFAULT_W
 
     // Route Group 1: (marketing) Commercial Landing Page & Live OMR Playground
     if (url.pathname === "/") {
-      sendHtml(res, renderMarketingLandingPage());
+      sendHtml(res, renderMarketingLandingPage(reqOrigin));
       return;
     }
 
@@ -369,31 +369,113 @@ export function createWebAppServer({ port = Number(process.env.PORT || DEFAULT_W
 
 function renderHeader(activePath) {
   return `
-  <header class="site-header">
-    <div class="container nav-inner">
+  <header class="site-header" id="site-header">
+    <div class="container nav-inner" id="nav-inner">
       <a href="/" class="brand-logo">
         <span>Linnet Score</span>
       </a>
-      <nav class="nav-links" aria-label="Primary Navigation">
-        <a href="/#playground" class="nav-link">OMR Playground</a>
-        <a href="/#linnet-app" class="nav-link">Linnet Mobile App</a>
-        <a href="/#schools" class="nav-link">For Music Schools</a>
-        <a href="/#pricing" class="nav-link">GBP Pricing</a>
-        <a href="/auth" class="nav-link" ${activePath === "/auth" ? 'aria-current="page"' : ""}>Sign In / OTP</a>
-        <a href="/dashboard" class="btn btn-cypress" ${activePath === "/dashboard" ? 'aria-current="page"' : ""}>Dashboard &amp; Educator Studio →</a>
+      <nav class="site-nav" aria-label="Primary Navigation">
+        <button
+          class="menu-button btn btn-sandstone"
+          type="button"
+          popovertarget="site-menu"
+          popovertargetaction="toggle"
+          aria-controls="site-menu"
+        >
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+          <span>Menu</span>
+        </button>
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="/#playground" class="nav-link">OMR Playground</a></li>
+          <li><a href="/#linnet-app" class="nav-link">Linnet Mobile App</a></li>
+          <li><a href="/#schools" class="nav-link">For Music Schools</a></li>
+          <li><a href="/#pricing" class="nav-link">Pricing</a></li>
+          <li><a href="/auth" class="nav-link" ${activePath === "/auth" ? 'aria-current="page"' : ""}>Sign In / OTP</a></li>
+          <li><a href="/dashboard" class="btn btn-cypress" ${activePath === "/dashboard" ? 'aria-current="page"' : ""}>Dashboard &amp; Educator Studio →</a></li>
+        </ul>
       </nav>
     </div>
-  </header>`;
+  </header>
+  <script type="module">
+    if (!Object.hasOwn(HTMLElement.prototype, "popover")) {
+      import("https://unpkg.com/@oddbird/popover-polyfill@latest/dist/popover.min.js");
+    }
+
+    const header = document.getElementById("site-header");
+    const inner = document.getElementById("nav-inner");
+    const menu = document.getElementById("site-menu");
+    let lastHeaderWidth = 0;
+
+    function isMenuPopoverOpen() {
+      if (!menu) return false;
+      try {
+        return menu.matches(":popover-open");
+      } catch {
+        return menu.classList.contains(":popover-open");
+      }
+    }
+
+    function syncNavLayout() {
+      if (!header || !inner || !menu) return;
+      const wasOpen = isMenuPopoverOpen();
+      header.classList.add("is-measuring");
+      menu.removeAttribute("popover");
+      header.classList.add("is-wide");
+      const wide = inner.scrollWidth <= inner.clientWidth;
+      header.classList.toggle("is-wide", wide);
+      if (!wide) {
+        menu.setAttribute("popover", "auto");
+        if (wasOpen && typeof menu.showPopover === "function") {
+          try {
+            menu.showPopover();
+          } catch {}
+        }
+      }
+      lastHeaderWidth = header.getBoundingClientRect().width;
+      requestAnimationFrame(() => header.classList.remove("is-measuring"));
+    }
+
+    if (header && inner && menu) {
+      syncNavLayout();
+      if ("ResizeObserver" in window) {
+        const ro = new ResizeObserver(() => {
+          const currentWidth = header.getBoundingClientRect().width;
+          const isCurrentlyWide = header.classList.contains("is-wide");
+          if (isCurrentlyWide || currentWidth > lastHeaderWidth) {
+            syncNavLayout();
+          }
+        });
+        ro.observe(header);
+        ro.observe(menu);
+      }
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(syncNavLayout);
+      }
+      menu.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => {
+          if (!header.classList.contains("is-wide") && typeof menu.hidePopover === "function") {
+            try {
+              menu.hidePopover();
+            } catch {}
+          }
+        });
+      });
+    }
+  </script>`;
 }
 
-function renderMarketingLandingPage() {
+function renderMarketingLandingPage(webOrigin = `http://localhost:${DEFAULT_WEB_PORT}`) {
   const initialScoreModel = parseMusicXML(BENCHMARK_SCORES.solo_piano.musicXML);
   const ssrSvg = renderScoreToSVG(initialScoreModel);
 
   const benchmarkRows = OMR_BENCHMARK_BASELINES.map(
     (b) => `
     <tr>
-      <td><strong>${b.title}</strong></td>
+      <th scope="row">${b.title}</th>
       <td><span class="status-pill status-sage">P0 Supported</span></td>
       <td class="font-mono">&gt;= ${b.minRecommendedDpi} DPI</td>
       <td class="font-mono">${b.notePitchAccuracyPct}%</td>
@@ -413,17 +495,17 @@ function renderMarketingLandingPage() {
 <body>
   ${renderHeader("/")}
 
-  <main class="container" style="padding-top: 56px; padding-bottom: 80px;">
+  <main class="container main-section">
     <!-- Hero Section (Deliverable S-08) -->
     <section style="text-align: center; max-width: 820px; margin: 0 auto 56px;">
-      <h1 style="font-size: 60px; margin-bottom: 18px;">Sheet Music Intelligence, Engineered for Developers.</h1>
-      <p style="font-size: 18px; color: var(--text-umber); margin-bottom: 28px;">
+      <h1 class="hero-title">Sheet Music Intelligence, Engineered for Developers.</h1>
+      <p class="hero-lead">
         Powered by the proven sheet-music-to-sound engine behind <strong>Linnet</strong>. Whether you are a <strong>software company</strong> embedding our OMR REST API &amp; <code>&lt;linnet-score-player&gt;</code> SDK, a <strong>music school</strong> sharing interactive practice scores with students, or a <strong>musician</strong> looking for our mobile practice companion—everything starts here.
       </p>
-      <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;">
+      <div class="hero-actions">
         <a href="/auth" class="btn btn-cypress">Businesses &amp; Schools — Get Free 50-Page API Key</a>
-        <a href="#linnet-app" class="btn btn-sandstone">📱 Musicians &amp; Students — Get the Linnet App</a>
-        <a href="/practice/job_01j8x9k2m4p7q" class="btn btn-sandstone">🎓 Try Student Practice Room</a>
+        <a href="#linnet-app" class="btn btn-sandstone">Musicians &amp; Students — Get the Linnet App</a>
+        <a href="/practice/job_01j8x9k2m4p7q" class="btn btn-sandstone">Try Student Practice Room</a>
       </div>
     </section>
 
@@ -431,9 +513,10 @@ function renderMarketingLandingPage() {
     <section id="playground" class="cashmere-card" style="margin-bottom: 56px;">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
         <div>
-          <h2 style="font-size: 32px; margin-bottom: 4px;">Interactive Live OMR Playground</h2>
+          <h2 class="section-title" style="margin-bottom: 4px;">Interactive Live OMR Playground</h2>
           <p style="margin: 0; color: var(--text-umber); font-size: 14px;">Upload a sheet music PDF/PNG or select a verified UK benchmark score to see SVG engraving and hear client-side Web Audio synthesis.</p>
         </div>
+        <span id="playground-telemetry" class="status-pill status-sage" aria-live="polite">200 OK · 1.38s · 99.2% Confidence · eu-west-2</span>
       </div>
 
       <div class="split-grid">
@@ -448,13 +531,14 @@ function renderMarketingLandingPage() {
             </div>
           </div>
 
-          <div style="border: 1.5px dashed var(--border-sandstone); border-radius: 10px; padding: 16px; text-align: center;">
+          <div id="playground-dropzone" class="dropzone">
             <div style="font-weight: 600; font-size: 13.5px; margin-bottom: 4px;">Drop PDF, PNG, or JPG Score</div>
             <div style="font-size: 12px; color: var(--text-umber); margin-bottom: 10px;">Min 150 DPI · Max 25 MB · Encrypted eu-west-2</div>
-            <label class="btn btn-sandstone" style="font-size: 12.5px; padding: 6px 12px;">
+            <label for="playground-file-input" class="btn btn-sandstone" style="font-size: 12.5px; padding: 6px 12px; cursor: pointer;">
               Choose Score File
               <input type="file" accept=".pdf,.png,.jpg,.jpeg" id="playground-file-input" hidden />
             </label>
+            <div id="upload-feedback" aria-live="polite" style="font-size: 12px; margin-top: 8px; color: var(--status-sage);"></div>
           </div>
 
           <div style="font-size: 12px; color: var(--text-umber);">
@@ -464,62 +548,71 @@ function renderMarketingLandingPage() {
 
         <!-- Right Pane: Rendered <linnet-score-player> + MusicXML Code Tree + API Response Tabs -->
         <div style="display: flex; flex-direction: column; gap: 12px;">
-          <div style="display: flex; gap: 8px;" role="tablist">
-            <button type="button" class="btn btn-cypress" data-tab-target="viewer" style="padding: 7px 14px; font-size: 13px;">Rendered Score + Audio SDK</button>
-            <button type="button" class="btn btn-sandstone" data-tab-target="musicxml" style="padding: 7px 14px; font-size: 13px;">Raw MusicXML 4.0 Tree</button>
-            <button type="button" class="btn btn-sandstone" data-tab-target="json" style="padding: 7px 14px; font-size: 13px;">API Response Telemetry</button>
+          <div class="playground-tabs" role="tablist" aria-label="OMR Playground output views">
+            <button type="button" class="playground-tab" role="tab" id="tab-viewer" aria-selected="true" tabindex="0" data-tab-target="viewer">Rendered Score + Audio SDK</button>
+            <button type="button" class="playground-tab" role="tab" id="tab-musicxml" aria-selected="false" tabindex="-1" data-tab-target="musicxml">Raw MusicXML 4.0 Tree</button>
+            <button type="button" class="playground-tab" role="tab" id="tab-json" aria-selected="false" tabindex="-1" data-tab-target="json">API Response Telemetry</button>
           </div>
 
-          <div id="tab-panel-viewer">
-            <linnet-score-player id="playground-player" preset="solo_piano" tempo="104" loop="false">
-              <div class="alabaster-panel">${ssrSvg}</div>
-            </linnet-score-player>
-          </div>
+          <div class="playground-panels">
+            <div id="tab-panel-viewer" role="tabpanel" aria-labelledby="tab-viewer" tabindex="0">
+              <linnet-score-player id="playground-player" preset="solo_piano" tempo="104" loop="false">
+                <div class="alabaster-panel">${ssrSvg}</div>
+              </linnet-score-player>
+            </div>
 
-          <pre id="tab-panel-musicxml" class="alabaster-panel font-mono" style="display: none; margin: 0; font-size: 12px; max-height: 310px; overflow: auto;"></pre>
-          <pre id="tab-panel-json" class="alabaster-panel font-mono" style="display: none; margin: 0; font-size: 12px; max-height: 310px; overflow: auto;"></pre>
+            <div id="tab-panel-musicxml" role="tabpanel" aria-labelledby="tab-musicxml" hidden="until-found">
+              <pre id="tab-musicxml-code" class="alabaster-panel font-mono" style="margin: 0; font-size: 12px; max-height: 310px; overflow: auto;"></pre>
+            </div>
+
+            <div id="tab-panel-json" role="tabpanel" aria-labelledby="tab-json" hidden="until-found">
+              <pre id="tab-json-code" class="alabaster-panel font-mono" style="margin: 0; font-size: 12px; max-height: 310px; overflow: auto;"></pre>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Supported Score Types & Benchmark Transparency Matrix (Deliverable S-12 & Mitigating Risk R-01) -->
     <section id="benchmarks" style="margin-bottom: 56px;">
-      <h2 style="font-size: 36px; margin-bottom: 8px;">OMR Benchmark Baseline &amp; Supported Score Matrix</h2>
+      <h2 id="benchmarks-heading" class="section-title" style="margin-bottom: 8px;">OMR Benchmark Baseline &amp; Supported Score Matrix</h2>
       <p style="color: var(--text-umber); margin-bottom: 20px;">
         Per Project Charter Deliverable <code>S-12</code> and Risk Mitigation <code>R-01</code>, we publish repeatable accuracy benchmarks across supported engraved score categories and clearly flag unsupported inputs before integration.
       </p>
-      <div class="cashmere-card" style="overflow-x: auto;">
-        <table class="linnet-table">
-          <thead>
-            <tr>
-              <th>Benchmark Corpus</th>
-              <th>Support Tier</th>
-              <th>Min DPI</th>
-              <th>Pitch Accuracy</th>
-              <th>Rhythm Accuracy</th>
-              <th>Median Latency</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${benchmarkRows}
-            <tr>
-              <td><strong>Dense Handwritten Manuscripts / Graphic Scores</strong></td>
-              <td><span class="status-pill status-terracotta">Out of P0 Scope (R-01)</span></td>
-              <td class="font-mono">N/A</td>
-              <td class="font-mono">—</td>
-              <td class="font-mono">—</td>
-              <td class="font-mono">Returns ERR_UNSUPPORTED_LAYOUT</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="cashmere-card">
+        <div tabindex="0" role="region" aria-labelledby="benchmarks-heading" class="table-wrapper">
+          <table class="linnet-table table-benchmarks">
+            <thead>
+              <tr>
+                <th>Benchmark Corpus</th>
+                <th>Support Tier</th>
+                <th>Min DPI</th>
+                <th>Pitch Accuracy</th>
+                <th>Rhythm Accuracy</th>
+                <th>Median Latency</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${benchmarkRows}
+              <tr>
+                <th scope="row">Dense Handwritten Manuscripts / Graphic Scores</th>
+                <td><span class="status-pill status-terracotta">Out of P0 Scope (R-01)</span></td>
+                <td class="font-mono">N/A</td>
+                <td class="font-mono">—</td>
+                <td class="font-mono">—</td>
+                <td class="font-mono">Returns ERR_UNSUPPORTED_LAYOUT</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
     <!-- 10-Line SDK Integration Showcase & No-Code Music School Studio (Deliverables S-05, S-06, S-07) -->
-    <section id="schools" class="split-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 56px;">
+    <section id="schools" class="split-grid split-grid--even" style="margin-bottom: 56px;">
       <div class="cashmere-card">
         <span class="status-pill status-sage" style="margin-bottom: 10px;">For App Developers &amp; Music-Tech Products</span>
-        <h3 style="font-size: 28px; margin-bottom: 8px;">1. Digitize via API &amp; Embed <code>&lt;linnet-score-player&gt;</code></h3>
+        <h3 class="card-title" style="margin-bottom: 8px;">1. Digitize via API &amp; Embed <code>&lt;linnet-score-player&gt;</code></h3>
         <p style="font-size: 14px; color: var(--text-umber);">Send a sheet music PDF/photo to our London <code>eu-west-2</code> Go Gateway and render interactive notation + sound in 10 lines of code:</p>
         <pre class="alabaster-panel font-mono" style="font-size: 12px; overflow-x: auto;">curl -X POST https://api.linnet.dev/v1/omr/jobs \\
   -H "Authorization: Bearer lnt_live_8f9a..." \\
@@ -529,13 +622,13 @@ function renderMarketingLandingPage() {
       </div>
       <div class="cashmere-card">
         <span class="status-pill status-ochre" style="margin-bottom: 10px;">For Music Schools, Conservatoires &amp; Teachers</span>
-        <h3 style="font-size: 28px; margin-bottom: 8px;">2. No-Code Student Practice Links &amp; LMS Embeds</h3>
+        <h3 class="card-title" style="margin-bottom: 8px;">2. No-Code Student Practice Links &amp; LMS Embeds</h3>
         <p style="font-size: 14px; color: var(--text-umber);">
           Don't have a software team? Upload any sheet music PDF in the <strong>Educator Studio</strong> to give your music students a dedicated practice link where they can hear the melody, slow down the tempo, and loop bars between lessons:
         </p>
         <div class="alabaster-panel" style="display: flex; flex-direction: column; gap: 10px;">
-          <div class="font-mono" style="font-size: 12px; color: var(--brand-cypress);">https://linnet.dev/practice/job_01j8x9k2m4p7q</div>
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <div class="font-mono" style="font-size: 12px; color: var(--brand-cypress); word-break: break-all;">${webOrigin}/practice/job_01j8x9k2m4p7q</div>
+          <div class="flex-wrap-row">
             <a href="/practice/job_01j8x9k2m4p7q" class="btn btn-cypress" style="padding: 7px 14px; font-size: 13px;">🎓 Open Live Student Practice Room →</a>
             <a href="/dashboard#educator-studio" class="btn btn-sandstone" style="padding: 7px 14px; font-size: 13px;">Open Educator Studio</a>
           </div>
@@ -545,10 +638,10 @@ function renderMarketingLandingPage() {
 
     <!-- Linnet Mobile App for Musicians & Students (Evolving from NoteAva / notavaa.com) -->
     <section id="linnet-app" class="cashmere-card" style="margin-bottom: 56px; background: var(--brand-cypress); color: var(--bg-alabaster);">
-      <div class="split-grid" style="grid-template-columns: 1.15fr 0.85fr; align-items: center;">
+      <div class="split-grid split-grid--app">
         <div>
           <span class="status-pill" style="background: rgba(250, 246, 240, 0.15); color: var(--bg-alabaster); margin-bottom: 14px;">📱 For Individual Musicians &amp; Music Students · Powered by NoteAva</span>
-          <h2 style="font-size: 40px; color: var(--bg-alabaster); margin-bottom: 12px;">The Linnet App: Take a Photo of Sheet Music &amp; Hear It Play.</h2>
+          <h2 class="section-title" style="color: var(--bg-alabaster); margin-bottom: 12px;">The Linnet App: Take a Photo of Sheet Music &amp; Hear It Play.</h2>
           <p style="color: var(--border-sandstone); font-size: 15.5px; margin-bottom: 18px;">
             Practicing at home and unsure how a measure, rhythm, or interval is supposed to sound? With the <strong>Linnet</strong> mobile practice companion, simply snap a photo of your paper sheet music and listen to an accurate playback immediately—without waiting until your next music lesson.
           </p>
@@ -556,14 +649,14 @@ function renderMarketingLandingPage() {
             <li><strong>Instant Camera-to-Sound Scanning:</strong> Photograph any printed exercise or piece and hear the melody and rhythm.</li>
             <li><strong>Step-by-Step Student Practice:</strong> Adjust tempo, loop tricky passages, and verify notes &amp; timing with confidence.</li>
           </ul>
-          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <div class="flex-wrap-row">
             <span class="btn" style="background: rgba(250, 246, 240, 0.12); color: var(--bg-alabaster); border-color: rgba(228, 214, 200, 0.3); cursor: default;"> App Store (Coming Soon)</span>
             <span class="btn" style="background: rgba(250, 246, 240, 0.12); color: var(--bg-alabaster); border-color: rgba(228, 214, 200, 0.3); cursor: default;">▶ Google Play (Coming Soon)</span>
           </div>
         </div>
 
         <form id="app-waitlist-form" class="alabaster-panel" style="color: var(--text-obsidian); display: flex; flex-direction: column; gap: 12px;">
-          <div class="font-serif" style="font-size: 26px;">Get Early Access &amp; Direct App Download Link</div>
+          <div class="font-serif" style="font-size: 24px;">Get Early Access &amp; Direct App Download Link</div>
           <p style="margin: 0; font-size: 13px; color: var(--text-umber);">
             Enter your UK/international mobile number (SMS) or email to receive the direct beta download &amp; instant notification when <strong>Linnet</strong> goes live on the App Store and Google Play:
           </p>
@@ -574,7 +667,7 @@ function renderMarketingLandingPage() {
             <option value="android">Google Play / Direct Android APK</option>
           </select>
           <button type="submit" class="btn btn-cypress">Notify Me &amp; Send Early Access Link</button>
-          <div id="waitlist-status-msg" style="font-size: 12.5px; color: var(--status-sage);"></div>
+          <div id="waitlist-status-msg" aria-live="polite" style="font-size: 12.5px; color: var(--status-sage);"></div>
         </form>
       </div>
     </section>
@@ -582,17 +675,17 @@ function renderMarketingLandingPage() {
     <!-- Transparent GBP (£) Pricing Calculator (Deliverable S-09 & Decision D-05) -->
     <section id="pricing" class="cashmere-card">
       <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-        <div>
-          <h2 style="font-size: 36px; margin-bottom: 6px;">Transparent UK GBP (£) Pricing Calculator</h2>
+        <div style="flex: 1 1 320px;">
+          <h2 class="section-title" style="margin-bottom: 6px;">Transparent UK GBP (£) Pricing Calculator</h2>
           <p style="margin: 0; color: var(--text-umber);">Start with 50 free pages in the Sandbox Tier (no credit card required). Configure hard spend caps on any paid plan.</p>
         </div>
-        <div class="alabaster-panel" style="min-width: 280px;">
-          <label style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
+        <div class="alabaster-panel pricing-calc-box">
+          <label for="calc-pages-slider" style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; gap: 8px;">
             <span>Estimated Monthly Pages:</span>
             <span class="font-mono" id="calc-pages-label">1,500 pages/mo</span>
           </label>
           <input type="range" id="calc-pages-slider" min="50" max="10000" step="50" value="1500" style="width: 100%; accent-color: var(--brand-cypress);" />
-          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-umber); margin-top: 4px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-umber); margin-top: 4px; gap: 8px;">
             <span>Recommended Tier: <strong id="calc-tier-name" style="color: var(--brand-cypress);">Growth</strong></span>
             <span class="font-mono" id="calc-total-gbp" style="font-weight: 700; color: var(--text-obsidian);">£109 / mo + VAT</span>
           </div>
@@ -630,26 +723,45 @@ function renderMarketingLandingPage() {
 
     const player = document.getElementById("playground-player");
     const telemetryPill = document.getElementById("playground-telemetry");
-    const xmlPanel = document.getElementById("tab-panel-musicxml");
-    const jsonPanel = document.getElementById("tab-panel-json");
-    const viewerPanel = document.getElementById("tab-panel-viewer");
+    const xmlCodeEl = document.getElementById("tab-musicxml-code");
+    const jsonCodeEl = document.getElementById("tab-json-code");
+    const uploadFeedback = document.getElementById("upload-feedback");
+    const fileInput = document.getElementById("playground-file-input");
+    const dropzone = document.getElementById("playground-dropzone");
+    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+    const panels = {
+      viewer: document.getElementById("tab-panel-viewer"),
+      musicxml: document.getElementById("tab-panel-musicxml"),
+      json: document.getElementById("tab-panel-json")
+    };
 
-    function selectPreset(presetKey) {
+    function selectPreset(presetKey, uploadMeta = null) {
       const preset = BENCHMARK_SCORES[presetKey];
       if (!preset) return;
-      player.setAttribute("preset", presetKey);
-      telemetryPill.textContent = \`200 OK · \${(preset.latencyMs / 1000).toFixed(2)}s · \${preset.confidencePct}% Confidence · eu-west-2\`;
-      xmlPanel.textContent = preset.musicXML;
-      jsonPanel.textContent = JSON.stringify({
-        id: preset.id,
-        status: "completed",
-        score_category: preset.category,
-        support_tier: preset.supportTier,
-        processing_time_ms: preset.latencyMs,
-        confidence_score: preset.confidencePct / 100,
-        storage_region: "eu-west-2",
-        gdpr_auto_delete_hours: 24
-      }, null, 2);
+      player?.setAttribute("preset", presetKey);
+      if (telemetryPill) {
+        telemetryPill.textContent = \`200 OK · \${(preset.latencyMs / 1000).toFixed(2)}s · \${preset.confidencePct}% Confidence · eu-west-2\`;
+      }
+      if (xmlCodeEl) {
+        xmlCodeEl.textContent = preset.musicXML;
+      }
+      if (jsonCodeEl) {
+        jsonCodeEl.textContent = JSON.stringify({
+          id: preset.id,
+          status: "completed",
+          score_category: preset.category,
+          support_tier: preset.supportTier,
+          processing_time_ms: preset.latencyMs,
+          confidence_score: preset.confidencePct / 100,
+          storage_region: "eu-west-2",
+          gdpr_auto_delete_hours: 24,
+          ...(uploadMeta ? {
+            mode: "prototype_preview",
+            uploaded_filename: uploadMeta.uploadedFilename,
+            file_size_bytes: uploadMeta.fileSizeBytes
+          } : {})
+        }, null, 2);
+      }
 
       document.querySelectorAll("[data-preset-btn]").forEach((btn) => {
         btn.className = btn.getAttribute("data-preset-btn") === presetKey ? "btn btn-cypress" : "btn btn-sandstone";
@@ -659,19 +771,105 @@ function renderMarketingLandingPage() {
     selectPreset("solo_piano");
 
     document.querySelectorAll("[data-preset-btn]").forEach((btn) => {
-      btn.addEventListener("click", () => selectPreset(btn.getAttribute("data-preset-btn")));
+      btn.addEventListener("click", () => {
+        if (uploadFeedback) uploadFeedback.textContent = "";
+        selectPreset(btn.getAttribute("data-preset-btn"));
+      });
     });
 
-    document.querySelectorAll("[data-tab-target]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const target = btn.getAttribute("data-tab-target");
-        viewerPanel.style.display = target === "viewer" ? "block" : "none";
-        xmlPanel.style.display = target === "musicxml" ? "block" : "none";
-        jsonPanel.style.display = target === "json" ? "block" : "none";
-        document.querySelectorAll("[data-tab-target]").forEach((b) => {
-          b.className = b === btn ? "btn btn-cypress" : "btn btn-sandstone";
-        });
+    function activateTab(selectedTab, moveFocus = false) {
+      const target = selectedTab?.getAttribute("data-tab-target");
+      if (!target) return;
+      for (const tab of tabs) {
+        const isSelected = tab === selectedTab;
+        tab.setAttribute("aria-selected", String(isSelected));
+        tab.tabIndex = isSelected ? 0 : -1;
+      }
+      for (const [key, panel] of Object.entries(panels)) {
+        if (!panel) continue;
+        if (key === target) {
+          panel.hidden = false;
+          if (key === "viewer") panel.setAttribute("tabindex", "0");
+          else panel.removeAttribute("tabindex");
+        } else {
+          panel.hidden = "until-found";
+          panel.removeAttribute("tabindex");
+        }
+      }
+      selectedTab.scrollIntoView({ block: "nearest", inline: "nearest", container: "nearest" });
+      if (moveFocus) selectedTab.focus();
+    }
+
+    tabs.forEach((tab, idx) => {
+      tab.addEventListener("click", () => activateTab(tab));
+      tab.addEventListener("keydown", (e) => {
+        let nextIdx = null;
+        if (e.key === "ArrowRight") nextIdx = (idx + 1) % tabs.length;
+        else if (e.key === "ArrowLeft") nextIdx = (idx - 1 + tabs.length) % tabs.length;
+        else if (e.key === "Home") nextIdx = 0;
+        else if (e.key === "End") nextIdx = tabs.length - 1;
+        if (nextIdx !== null) {
+          e.preventDefault();
+          activateTab(tabs[nextIdx], true);
+        }
       });
+    });
+
+    Object.entries(panels).forEach(([key, panel]) => {
+      panel?.addEventListener("beforematch", () => {
+        const matchingTab = tabs.find((t) => t.getAttribute("data-tab-target") === key);
+        if (matchingTab) activateTab(matchingTab);
+      });
+    });
+
+    function handleUploadedScoreFile(file) {
+      if (!file || !uploadFeedback) return;
+      const ext = file.name.split(".").pop()?.toLowerCase() || "";
+      if (!["pdf", "png", "jpg", "jpeg"].includes(ext)) {
+        uploadFeedback.style.color = "var(--status-terracotta)";
+        uploadFeedback.textContent = "ERR_INVALID_MIME_TYPE: Only .pdf, .png, or .jpg files are supported.";
+        return;
+      }
+      if (file.size > 25 * 1024 * 1024) {
+        uploadFeedback.style.color = "var(--status-terracotta)";
+        uploadFeedback.textContent = "File exceeds the 25 MB upload limit.";
+        return;
+      }
+
+      const lower = file.name.toLowerCase();
+      const matchedPreset = /choral|satb|bach/.test(lower)
+        ? "choral_satb"
+        : /jazz|lead|chord/.test(lower)
+          ? "lead_sheet"
+          : "solo_piano";
+
+      selectPreset(matchedPreset, {
+        uploadedFilename: file.name,
+        fileSizeBytes: file.size
+      });
+      uploadFeedback.style.color = "var(--status-sage)";
+      uploadFeedback.textContent = \`Digitized "\${file.name}" (\${Math.max(1, Math.round(file.size / 1024))} KB) — Prototype preview loaded\`;
+    }
+
+    fileInput?.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (file) handleUploadedScoreFile(file);
+    });
+
+    dropzone?.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("is-dragover");
+    });
+
+    dropzone?.addEventListener("dragleave", () => {
+      dropzone.classList.remove("is-dragover");
+    });
+
+    dropzone?.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("is-dragover");
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleUploadedScoreFile(file);
     });
 
     // Interactive GBP Pricing Calculator (Deliverable S-09)
@@ -733,18 +931,18 @@ function renderAuthPage() {
 <body>
   ${renderHeader("/auth")}
 
-  <main class="container" style="padding-top: 40px; padding-bottom: 72px;">
-    <div class="split-grid" style="grid-template-columns: 1.05fr 0.95fr; align-items: stretch;">
+  <main class="container main-section">
+    <div class="split-grid split-grid--auth">
       <!-- Left Panel (#FAF6F0 Alabaster): Multi-Modal Auth with SMS OTP, Passkeys & OAuth -->
       <section class="cashmere-card">
         <span class="status-pill status-sage" style="margin-bottom: 12px;">Zero-Friction 60-Second Sandbox Provisioning</span>
-        <h1 style="font-size: 40px; margin-bottom: 8px;">Sign in or claim your UK Sandbox API Key</h1>
+        <h1 class="page-title" style="margin-bottom: 8px;">Sign in or claim your UK Sandbox API Key</h1>
         <p style="color: var(--text-umber); font-size: 14.5px; margin-bottom: 20px;">
           Authenticate via <strong>SMS OTP</strong>, <strong>WebAuthn Passkey</strong>, or <strong>GitHub / Google Workspace SSO</strong>. Your default workspace and 50-page Sandbox key are provisioned immediately.
         </p>
 
         <!-- Instant SSO / Passkey Buttons -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+        <div class="auth-sso-grid">
           <a href="/dashboard" class="btn btn-sandstone" style="font-size: 13px;">🔑 Passkey</a>
           <a href="/dashboard" class="btn btn-sandstone" style="font-size: 13px;">🐙 GitHub SSO</a>
           <a href="/dashboard" class="btn btn-sandstone" style="font-size: 13px;">🏢 Google SSO</a>
@@ -759,7 +957,7 @@ function renderAuthPage() {
             <input id="org-name-input" type="text" value="London Music-Tech Labs" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-sandstone); background: var(--bg-alabaster); font: inherit;" />
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="auth-fields-grid">
             <div>
               <label for="phone-input" style="display: block; font-size: 12.5px; font-weight: 600; color: var(--text-umber); margin-bottom: 4px;">Phone Number (E.164 / UK +44)</label>
               <input id="phone-input" type="tel" class="font-mono" value="+44 7700 900077" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-sandstone); background: var(--bg-alabaster);" />
@@ -784,22 +982,22 @@ function renderAuthPage() {
           <button type="submit" class="btn btn-cypress" id="send-otp-btn">Send 6-Digit SMS Verification Code (OTP)</button>
 
           <div id="otp-verify-box" style="display: none; border-top: 1px solid var(--border-sandstone); padding-top: 14px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="flex-wrap-row" style="justify-content: space-between;">
               <span style="font-size: 13px; font-weight: 600;">Enter 6-Digit Code (5-min TTL · Max 3 Attempts)</span>
               <span class="status-pill status-sage font-mono" id="otp-demo-hint"></span>
             </div>
             <input id="otp-code-input" type="text" maxlength="6" placeholder="123456" class="font-mono" style="width: 100%; padding: 12px; font-size: 20px; letter-spacing: 0.35em; text-align: center; border-radius: 8px; border: 1.5px solid var(--brand-cypress); margin: 10px 0;" />
             <button type="button" class="btn btn-cypress" id="verify-otp-btn" style="width: 100%;">Verify OTP &amp; Provision 50-Page Sandbox Key →</button>
           </div>
-          <div id="auth-status-msg" style="font-size: 13px;"></div>
+          <div id="auth-status-msg" aria-live="polite" style="font-size: 13px;"></div>
         </form>
       </section>
 
       <!-- Right Panel (#1B3B2B Lush Cypress): Live OMR Manuscript Scanner & cURL Preview -->
-      <section style="background: var(--brand-cypress); color: var(--bg-alabaster); border-radius: 16px; padding: 32px; display: flex; flex-direction: column; justify-content: space-between;">
+      <section style="background: var(--brand-cypress); color: var(--bg-alabaster); border-radius: 16px; padding: clamp(20px, 3.5vw, 32px); display: flex; flex-direction: column; justify-content: space-between; gap: 18px;">
         <div>
           <span class="status-pill" style="background: rgba(250, 246, 240, 0.14); color: var(--bg-alabaster); margin-bottom: 16px;">Core IP Isolated · Private VPC mTLS</span>
-          <h2 style="font-size: 36px; color: var(--bg-alabaster); margin-bottom: 12px;">From signup to first production OMR call in under 60 seconds.</h2>
+          <h2 class="section-title" style="color: var(--bg-alabaster); margin-bottom: 12px;">From signup to first production OMR call in under 60 seconds.</h2>
           <p style="color: var(--border-sandstone); font-size: 14.5px;">
             The moment your SMS OTP or Passkey verifies, our onboarding hook provisions your isolated PostgreSQL RLS workspace and pre-populates your working Sandbox cURL command:
           </p>
@@ -884,7 +1082,7 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
     .map(
       (k) => `
       <tr>
-        <td><strong>${k.name}</strong></td>
+        <th scope="row">${k.name}</th>
         <td class="font-mono">${k.keyPrefix}••••••••••••••••</td>
         <td><span class="status-pill ${k.environment === "live" ? "status-sage" : "status-ochre"}">${k.environment}</span></td>
         <td class="font-mono">${k.lastUsedAt || "Never"}</td>
@@ -900,7 +1098,7 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
     .map(
       (j) => `
       <tr>
-        <td class="font-mono"><strong>${j.id}</strong></td>
+        <th scope="row" class="font-mono">${j.id}</th>
         <td class="font-mono">${j.timestamp}</td>
         <td>${j.scoreCategory}</td>
         <td class="font-mono">${j.inputFormat.toUpperCase()} → ${j.outputFormat.toUpperCase()}</td>
@@ -912,7 +1110,16 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
           </span>
         </td>
         <td>
-          <button type="button" class="btn btn-sandstone" style="padding: 5px 10px; font-size: 12px;" data-inspect-job="${j.id}">Inspect &amp; Play</button>
+          <button
+            type="button"
+            class="btn btn-sandstone"
+            style="padding: 5px 10px; font-size: 12px;"
+            data-inspect-job="${j.id}"
+            data-job-category="${j.scoreCategory}"
+            data-job-error="${j.errorCode || ""}"
+            data-job-status="${j.status}"
+            data-job-latency="${j.durationMs}"
+          >Inspect &amp; Play</button>
         </td>
       </tr>`
     )
@@ -931,14 +1138,14 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
 <body>
   ${renderHeader("/dashboard")}
 
-  <main class="container" style="padding-top: 36px; padding-bottom: 80px;">
+  <main class="container main-section">
     <!-- Workspace Header -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px;">
       <div>
         <div style="font-size: 13px; color: var(--text-umber);">Tenant Workspace · RLS Scoped (<code>org_id: ${state.organization.id.slice(0, 12)}...</code>)</div>
-        <h1 style="font-size: 40px; margin: 0;">${state.organization.name}</h1>
+        <h1 class="page-title" style="margin: 0;">${state.organization.name}</h1>
       </div>
-      <div style="display: flex; gap: 10px; align-items: center;">
+      <div class="flex-wrap-row">
         <span class="status-pill status-sage">📱 SMS OTP Verified (${state.user.phoneNumber})</span>
         <span class="status-pill status-ochre">Tier: ${state.organization.planTier.toUpperCase()}</span>
       </div>
@@ -948,7 +1155,7 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
     <section class="cashmere-card" style="margin-bottom: 28px; border-left: 4px solid var(--brand-cypress);">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 10px;">
         <div>
-          <h2 style="font-size: 24px; margin: 0;">30-Second Quickstart — Your Active Sandbox cURL</h2>
+          <h2 class="card-title" style="margin: 0;">30-Second Quickstart — Your Active Sandbox cURL</h2>
           <p style="margin: 0; font-size: 13.5px; color: var(--text-umber);">Pre-populated with your provisioned Sandbox token. Run this command to digitize your first score:</p>
         </div>
         <span class="status-pill status-sage">Time to First Integration: 42.0s</span>
@@ -986,13 +1193,13 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
     <section class="cashmere-card" style="margin-bottom: 32px;">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
         <div>
-          <h2 style="font-size: 28px; margin: 0;">API Keys Vault (SHA-256 Hashed · Deliverable S-02)</h2>
+          <h2 id="keys-heading" class="card-title" style="margin: 0;">API Keys Vault (SHA-256 Hashed · Deliverable S-02)</h2>
           <p style="margin: 0; font-size: 13.5px; color: var(--text-umber);">Raw keys are never stored in PostgreSQL. Rotating a <code>live</code> key requires SMS OTP step-up verification and grants a 24h dual-validity window.</p>
         </div>
         <button type="button" class="btn btn-cypress" id="open-step-up-modal-btn">Verify SMS OTP Step-Up MFA</button>
       </div>
-      <div style="overflow-x: auto;">
-        <table class="linnet-table">
+      <div tabindex="0" role="region" aria-labelledby="keys-heading" class="table-wrapper">
+        <table class="linnet-table table-keys">
           <thead>
             <tr>
               <th>Key Name</th>
@@ -1003,7 +1210,7 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="api-keys-tbody">
             ${keyRows}
           </tbody>
         </table>
@@ -1014,13 +1221,13 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
     <section class="cashmere-card" style="margin-bottom: 32px;">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
         <div>
-          <h2 style="font-size: 28px; margin: 0;">OMR Job Inspector &amp; Request Logs (Deliverable S-11)</h2>
+          <h2 id="jobs-heading" class="card-title" style="margin: 0;">OMR Job Inspector &amp; Request Logs (Deliverable S-11)</h2>
           <p style="margin: 0; font-size: 13.5px; color: var(--text-umber);">Inspect per-call telemetry, structured error codes (<code>ERR_LOW_DPI_IMAGE</code>), and test digitized outputs in the embedded Score Viewer.</p>
         </div>
         <span class="status-pill status-sage" id="p1-demand-badge">P1 Score Editing Requests (S-14): ${state.p1EditingRequests}</span>
       </div>
-      <div style="overflow-x: auto;">
-        <table class="linnet-table">
+      <div tabindex="0" role="region" aria-labelledby="jobs-heading" class="table-wrapper">
+        <table class="linnet-table table-jobs">
           <thead>
             <tr>
               <th>Job ID</th>
@@ -1045,7 +1252,7 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
         <div>
           <span class="status-pill status-sage" style="margin-bottom: 6px;">🎓 For Music Schools, Conservatoires &amp; Teachers</span>
-          <h2 style="font-size: 28px; margin: 0;">No-Code Educator Studio — Share Interactive Scores with Music Students</h2>
+          <h2 class="card-title" style="margin: 0;">No-Code Educator Studio — Share Interactive Scores with Music Students</h2>
           <p style="margin: 0; font-size: 13.5px; color: var(--text-umber);">
             Generate a ready-to-share <strong>Student Practice Link</strong> or paste an <code>&lt;iframe&gt;</code> embed into Canvas, Moodle, Google Classroom, or your school website so students can hear the melody and practice with tempo/loop controls.
           </p>
@@ -1053,22 +1260,22 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
         <a href="/practice/job_01j8x9k2m4p7q" class="btn btn-cypress">Open Live Student Practice Room →</a>
       </div>
 
-      <div class="split-grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="split-grid split-grid--even">
         <div class="alabaster-panel">
           <div style="font-size: 12px; font-weight: 600; color: var(--text-umber); margin-bottom: 6px;">SHAREABLE STUDENT PRACTICE LINK (MOBILE &amp; DESKTOP)</div>
           <div class="font-mono" style="font-size: 13px; color: var(--brand-cypress); word-break: break-all;">${webOrigin}/practice/job_01j8x9k2m4p7q?preset=solo_piano</div>
         </div>
         <div class="alabaster-panel">
           <div style="font-size: 12px; font-weight: 600; color: var(--text-umber); margin-bottom: 6px;">NO-CODE SCHOOL PORTAL / LMS EMBED SNIPPET</div>
-          <code class="font-mono" style="font-size: 12px;">&lt;iframe src="https://linnet.dev/practice/job_01j8x9k2m4p7q" width="100%" height="380" frameborder="0"&gt;&lt;/iframe&gt;</code>
+          <code class="font-mono" style="font-size: 12px;">&lt;iframe src="${webOrigin}/practice/job_01j8x9k2m4p7q" width="100%" height="380" frameborder="0"&gt;&lt;/iframe&gt;</code>
         </div>
       </div>
     </section>
 
     <!-- Webhooks & SDK CORS Allowed Origins (/webhooks & /billing — Mitigating Risk R-05 & Deliverable S-09) -->
-    <section class="split-grid" style="grid-template-columns: 1fr 1fr;">
+    <section class="split-grid split-grid--even">
       <div class="cashmere-card">
-        <h3 style="font-size: 24px; margin-bottom: 8px;">SDK Allowed Origins (CORS Anti-Resale Lock · R-05)</h3>
+        <h3 class="card-title" style="margin-bottom: 8px;">SDK Allowed Origins (CORS Anti-Resale Lock · R-05)</h3>
         <p style="font-size: 13.5px; color: var(--text-umber);">Only these whitelisted domains can render <code>&lt;linnet-score-player&gt;</code> with your publishable token:</p>
         <ul class="font-mono" style="font-size: 13px; padding-left: 18px;">
           ${state.organization.allowedOrigins.map((o) => `<li>${o}</li>`).join("")}
@@ -1079,7 +1286,7 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
       </div>
 
       <div class="cashmere-card">
-        <h3 style="font-size: 24px; margin-bottom: 8px;">Usage &amp; UK Stripe Billing (Deliverable S-09 · D-05)</h3>
+        <h3 class="card-title" style="margin-bottom: 8px;">Usage &amp; UK Stripe Billing (Deliverable S-09 · D-05)</h3>
         <p style="font-size: 13.5px; color: var(--text-umber);">Hybrid subscription + metered overage engine synced via Stripe Billing Metered Events API.</p>
         <div class="alabaster-panel" style="font-size: 13px; margin-bottom: 12px;">
           <div><strong>Active Pricing Metric (D-05):</strong> <code>${state.organization.pricingMetric}</code> (Tracks both pages &amp; jobs)</div>
@@ -1091,16 +1298,17 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
   </main>
 
   <!-- Native <dialog closedby="any"> Modal 1: SMS OTP Step-Up & One-Time Key Rotation Modal -->
-  <dialog id="step-up-dialog" class="linnet-dialog" closedby="any" aria-labelledby="step-up-dialog-title">
-    <h2 id="step-up-dialog-title" style="font-size: 28px; margin-bottom: 8px;">Step-Up SMS OTP Verification &amp; Key Rotation</h2>
+  <dialog id="step-up-dialog" class="linnet-dialog" closedby="any" aria-labelledby="step-up-dialog-title" data-user-phone="${state.user.phoneNumber}">
+    <h2 id="step-up-dialog-title" class="card-title" style="margin-bottom: 8px;">Step-Up SMS OTP Verification &amp; Key Rotation</h2>
     <p style="font-size: 13.5px; color: var(--text-umber); margin-bottom: 16px;">
       Rotating a production <code>lnt_live_</code> API key requires step-up verification via SMS OTP. The newly generated raw key will be shown <strong>only once</strong> below.
     </p>
-    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+    <div class="dialog-otp-row">
       <button type="button" class="btn btn-sandstone" id="dialog-send-otp-btn">1. Send SMS OTP to ${state.user.phoneNumber}</button>
       <input type="text" id="dialog-otp-input" placeholder="6-digit OTP" class="font-mono" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-sandstone); width: 140px;" />
       <button type="button" class="btn btn-cypress" id="dialog-verify-rotate-btn">2. Verify &amp; Rotate Key</button>
     </div>
+    <div id="dialog-otp-status" aria-live="polite" style="font-size: 12.5px; margin-bottom: 10px;"></div>
     <pre id="rotated-key-output" class="alabaster-panel font-mono" style="display: none; font-size: 12.5px; color: var(--status-sage);"></pre>
     <form method="dialog" style="margin-top: 16px; text-align: right;">
       <button type="submit" class="btn btn-sandstone">Close</button>
@@ -1109,10 +1317,11 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
 
   <!-- Native <dialog closedby="any"> Modal 2: OMR Job Inspector with Embedded <linnet-score-player> -->
   <dialog id="job-inspector-dialog" class="linnet-dialog" closedby="any" aria-labelledby="inspector-dialog-title" style="max-width: 780px;">
-    <h2 id="inspector-dialog-title" style="font-size: 28px; margin-bottom: 6px;">OMR Job Inspector &amp; Score Player Preview</h2>
+    <h2 id="inspector-dialog-title" class="card-title" style="margin-bottom: 6px;">OMR Job Inspector &amp; Score Player Preview</h2>
     <p id="inspector-job-meta" class="font-mono" style="font-size: 12px; color: var(--text-umber); margin-bottom: 14px;"></p>
+    <div id="inspector-error-box" class="alabaster-panel" hidden style="border-left: 4px solid var(--status-terracotta); color: var(--status-terracotta); font-size: 13.5px; margin-bottom: 12px;"></div>
     <linnet-score-player id="inspector-player" preset="solo_piano" enable-feedback="true"></linnet-score-player>
-    <form method="dialog" style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+    <form method="dialog" style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
       <span id="inspector-feedback-status" style="font-size: 12.5px; color: var(--status-sage);"></span>
       <button type="submit" class="btn btn-sandstone">Close Inspector</button>
     </form>
@@ -1141,8 +1350,13 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
 
     const stepUpDialog = document.getElementById("step-up-dialog");
     const inspectorDialog = document.getElementById("job-inspector-dialog");
+    const inspectorPlayer = document.getElementById("inspector-player");
+    const inspectorErrorBox = document.getElementById("inspector-error-box");
     const otpInput = document.getElementById("dialog-otp-input");
+    const otpStatus = document.getElementById("dialog-otp-status");
     const rotatedOutput = document.getElementById("rotated-key-output");
+    const keysTbody = document.getElementById("api-keys-tbody");
+    const userPhone = stepUpDialog?.dataset.userPhone || "+447700900077";
 
     document.getElementById("open-step-up-modal-btn")?.addEventListener("click", () => {
       stepUpDialog.showModal();
@@ -1158,20 +1372,38 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
       const res = await fetch("/api/auth/otp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber: "+447700900077", purpose: "step_up_key_rotation" })
+        body: JSON.stringify({ phoneNumber: userPhone, purpose: "step_up_key_rotation" })
       });
       const data = await res.json();
+      if (!res.ok) {
+        if (otpStatus) {
+          otpStatus.style.color = "var(--status-terracotta)";
+          otpStatus.textContent = data.error?.message || "Failed to dispatch OTP";
+        }
+        return;
+      }
       if (data.demoOtpPreview) {
         otpInput.value = data.demoOtpPreview;
+        if (otpStatus) {
+          otpStatus.style.color = "var(--status-sage)";
+          otpStatus.textContent = \`Demo OTP sent to \${data.phoneNumber}: \${data.demoOtpPreview}\`;
+        }
       }
     });
 
     document.getElementById("dialog-verify-rotate-btn")?.addEventListener("click", async () => {
-      await fetch("/api/auth/otp/verify", {
+      const verifyRes = await fetch("/api/auth/otp/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber: "+447700900077", otpCode: otpInput.value })
+        body: JSON.stringify({ phoneNumber: userPhone, otpCode: otpInput.value })
       });
+      if (!verifyRes.ok) {
+        const verifyErr = await verifyRes.json();
+        rotatedOutput.style.display = "block";
+        rotatedOutput.style.color = "var(--status-terracotta)";
+        rotatedOutput.textContent = \`OTP Error: \${verifyErr.error?.message || "Invalid OTP"}\`;
+        return;
+      }
       const rotRes = await fetch("/api/keys/rotate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1179,15 +1411,51 @@ function renderDashboardPage(state, webOrigin = `http://localhost:${DEFAULT_WEB_
       });
       const rotData = await rotRes.json();
       rotatedOutput.style.display = "block";
-      rotatedOutput.textContent = rotRes.ok
-        ? \`NEW LIVE KEY (Copy now — shown once):\\n\${rotData.oneTimeRawKey}\\nOld key valid until: \${rotData.graceExpiresAt}\`
-        : \`Error: \${rotData.error?.message}\`;
+      if (rotRes.ok) {
+        rotatedOutput.style.color = "var(--status-sage)";
+        rotatedOutput.textContent = \`NEW LIVE KEY (Copy now — shown once):\\n\${rotData.oneTimeRawKey}\\nOld key valid until: \${rotData.graceExpiresAt}\`;
+        if (keysTbody && rotData.newKeyRecord) {
+          const row = document.createElement("tr");
+          row.innerHTML = \`
+            <th scope="row">\${rotData.newKeyRecord.name}</th>
+            <td class="font-mono">\${rotData.newKeyRecord.keyPrefix}••••••••••••••••</td>
+            <td><span class="status-pill status-sage">\${rotData.newKeyRecord.environment}</span></td>
+            <td class="font-mono">Just now</td>
+            <td class="font-mono">—</td>
+            <td><span class="status-pill status-sage">Active</span></td>
+          \`;
+          keysTbody.prepend(row);
+        }
+      } else {
+        rotatedOutput.style.color = "var(--status-terracotta)";
+        rotatedOutput.textContent = \`Error: \${rotData.error?.message}\`;
+      }
     });
 
     document.querySelectorAll("[data-inspect-job]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const jobId = btn.getAttribute("data-inspect-job");
-        document.getElementById("inspector-job-meta").textContent = \`Job ID: \${jobId} · Region: eu-west-2 (24h GDPR Ephemeral)\`;
+        const category = btn.getAttribute("data-job-category") || "solo_piano";
+        const errorCode = btn.getAttribute("data-job-error") || "";
+        const latency = btn.getAttribute("data-job-latency") || "0";
+
+        document.getElementById("inspector-job-meta").textContent = \`Job ID: \${jobId} · Category: \${category} · \${latency}ms · eu-west-2 (24h GDPR Ephemeral)\`;
+
+        if (errorCode) {
+          if (inspectorPlayer) inspectorPlayer.hidden = true;
+          if (inspectorErrorBox) {
+            inspectorErrorBox.hidden = false;
+            inspectorErrorBox.textContent = \`\${errorCode}: Input scan did not meet the 150 DPI minimum threshold required for reliable OMR extraction. Re-scan at >= 150 DPI and resubmit.\`;
+          }
+        } else {
+          if (inspectorErrorBox) inspectorErrorBox.hidden = true;
+          if (inspectorPlayer) {
+            inspectorPlayer.hidden = false;
+            const validPreset = ["solo_piano", "choral_satb", "lead_sheet"].includes(category) ? category : "solo_piano";
+            inspectorPlayer.setAttribute("preset", validPreset);
+          }
+        }
+
         inspectorDialog.showModal();
       });
     });
@@ -1221,17 +1489,17 @@ function renderStudentPracticePage(state, jobId, presetKey) {
 <body>
   ${renderHeader("/practice")}
 
-  <main class="container" style="padding-top: 36px; padding-bottom: 72px;">
+  <main class="container main-section">
     <div class="cashmere-card" style="margin-bottom: 24px;">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px;">
         <div>
           <span class="status-pill status-sage" style="margin-bottom: 6px;">🎓 Student Practice Companion · Assigned by ${state.organization.name}</span>
-          <h1 style="font-size: 36px; margin: 0;">${preset.label}</h1>
+          <h1 class="page-title" style="margin: 0;">${preset.label}</h1>
           <p style="margin: 4px 0 0; font-size: 14px; color: var(--text-umber);">
             Press <strong>▶ Play Score</strong> to hear how your piece should sound, drag the <strong>Tempo slider</strong> to practice slowly, or turn on <strong>↻ Loop</strong> to repeat measures between lessons.
           </p>
         </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div class="flex-wrap-row">
           <a href="/practice/${jobId}?preset=solo_piano" class="btn ${validPreset === "solo_piano" ? "btn-cypress" : "btn-sandstone"}" style="font-size: 12.5px; padding: 7px 12px;">🎹 Solo Piano</a>
           <a href="/practice/${jobId}?preset=choral_satb" class="btn ${validPreset === "choral_satb" ? "btn-cypress" : "btn-sandstone"}" style="font-size: 12.5px; padding: 7px 12px;">🎶 Choral SATB</a>
           <a href="/practice/${jobId}?preset=lead_sheet" class="btn ${validPreset === "lead_sheet" ? "btn-cypress" : "btn-sandstone"}" style="font-size: 12.5px; padding: 7px 12px;">🎷 Jazz Lead Sheet</a>
@@ -1243,7 +1511,7 @@ function renderStudentPracticePage(state, jobId, presetKey) {
       </linnet-score-player>
     </div>
 
-    <div class="alabaster-panel" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div class="alabaster-panel flex-wrap-row" style="justify-content: space-between;">
       <div>
         <strong>Want to scan your own paper sheet music books at home?</strong>
         <span style="color: var(--text-umber); font-size: 14px; margin-left: 6px;">Get the <strong>Linnet Mobile App</strong> (powered by NoteAva) for iOS &amp; Android.</span>

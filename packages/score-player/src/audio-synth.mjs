@@ -44,8 +44,9 @@ export class ScoreAudioSynthesizer {
       }
     }
     if (this.audioCtx && this.audioCtx.state === "suspended") {
-      this.audioCtx.resume();
+      return this.audioCtx.resume();
     }
+    return null;
   }
 
   scheduleWarmPianoTone(frequencyHz, startTime, durationSec) {
@@ -81,10 +82,19 @@ export class ScoreAudioSynthesizer {
     oscHarmonic.stop(startTime + durationSec);
   }
 
-  play() {
+  async play() {
     if (!this.flattenedNotes.length || this.isPlaying) return;
-    this.ensureAudioContext();
+    const resumePromise = this.ensureAudioContext();
     this.isPlaying = true;
+
+    if (resumePromise) {
+      try {
+        await resumePromise;
+      } catch {
+        // Keep visual playback running if browser autoplay blocks audio resume
+      }
+    }
+    if (!this.isPlaying) return;
 
     const now = this.audioCtx ? this.audioCtx.currentTime : performance.now() / 1000;
     this.nextNoteTime = now + 0.04;

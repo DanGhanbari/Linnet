@@ -14,6 +14,13 @@ test("Phase 2 & 3 Exit Gates: Landing Page Playground, SMS OTP Auth + 60s Sandbo
   assert.ok(homeHtml.includes("<linnet-score-player"));
   assert.ok(homeHtml.includes("OMR Benchmark Baseline"));
   assert.ok(homeHtml.includes("Transparent UK GBP (£) Pricing Calculator"));
+  assert.ok(homeHtml.includes('id="playground-telemetry"'));
+  assert.ok(homeHtml.includes('popovertarget="site-menu"'));
+  assert.ok(homeHtml.includes('id="site-menu"'));
+  assert.ok(homeHtml.includes('role="tablist"'));
+  assert.ok(homeHtml.includes('hidden="until-found"'));
+  assert.ok(homeHtml.includes('class="table-wrapper"'));
+  assert.ok(!homeHtml.includes('split-grid" style="grid-template-columns:'));
 
   // 2. Verify Lush & Nude Design Tokens in /styles.css
   const cssRes = await server.dispatchRequest({ method: "GET", path: "/styles.css" });
@@ -64,6 +71,10 @@ test("Phase 2 & 3 Exit Gates: Landing Page Playground, SMS OTP Auth + 60s Sandbo
   assert.match(rotateData.oneTimeRawKey, /^lnt_live_/);
 
   // 5. Verify B2B Developer & Educator Dashboard (/dashboard) renders updated workspace, keys, logs & Educator Studio
+  const authRes = await server.dispatchRequest({ method: "GET", path: "/auth" });
+  assert.equal(authRes.status, 200);
+  assert.ok(!authRes.text().includes('split-grid" style="grid-template-columns:'));
+
   const dashRes = await server.dispatchRequest({ method: "GET", path: "/dashboard" });
   assert.equal(dashRes.status, 200);
   const dashHtml = dashRes.text();
@@ -74,6 +85,9 @@ test("Phase 2 & 3 Exit Gates: Landing Page Playground, SMS OTP Auth + 60s Sandbo
   assert.ok(dashHtml.includes("http://localhost:3100"));
   assert.ok(dashHtml.includes("http://localhost:3100/practice/job_01j8x9k2m4p7q?preset=solo_piano"));
   assert.ok(!dashHtml.includes("http://localhost:3000"));
+  assert.ok(dashHtml.includes('data-job-category="choral_satb"'));
+  assert.ok(dashHtml.includes('data-user-phone="+447700900123"'));
+  assert.ok(!dashHtml.includes('split-grid" style="grid-template-columns:'));
 
   // 6. Verify Student Practice Room (/practice/:jobId) for Music Schools & Students
   const practiceRes = await server.dispatchRequest({
