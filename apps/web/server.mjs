@@ -409,14 +409,19 @@ function renderHeader(activePath) {
       </a>
       <nav class="site-nav" aria-label="Primary Navigation">
         <button
-          class="menu-button btn btn-sandstone"
+          id="menu-button"
+          class="menu-button"
           type="button"
           popovertarget="site-menu"
           popovertargetaction="toggle"
           aria-controls="site-menu"
+          aria-expanded="false"
+          aria-label="Open navigation menu"
         >
-          ${ICONS.menu}
-          <span>Menu</span>
+          <span class="menu-icon" aria-hidden="true">
+            <span class="menu-bar menu-bar--top"></span>
+            <span class="menu-bar menu-bar--bottom"></span>
+          </span>
         </button>
         <ul id="site-menu" class="site-menu" popover="auto">
           <li><a href="/#playground" class="nav-link">Playground</a></li>
@@ -437,6 +442,7 @@ function renderHeader(activePath) {
     const header = document.getElementById("site-header");
     const inner = document.getElementById("nav-inner");
     const menu = document.getElementById("site-menu");
+    const menuButton = document.getElementById("menu-button");
     let lastHeaderWidth = 0;
 
     function isMenuPopoverOpen() {
@@ -446,6 +452,13 @@ function renderHeader(activePath) {
       } catch {
         return menu.classList.contains(":popover-open");
       }
+    }
+
+    function syncMenuButtonState() {
+      if (!menuButton || !header) return;
+      const expanded = !header.classList.contains("is-wide") && isMenuPopoverOpen();
+      menuButton.setAttribute("aria-expanded", String(expanded));
+      menuButton.setAttribute("aria-label", expanded ? "Close navigation menu" : "Open navigation menu");
     }
 
     function syncNavLayout() {
@@ -465,11 +478,13 @@ function renderHeader(activePath) {
         }
       }
       lastHeaderWidth = header.getBoundingClientRect().width;
+      syncMenuButtonState();
       requestAnimationFrame(() => header.classList.remove("is-measuring"));
     }
 
     if (header && inner && menu) {
       syncNavLayout();
+      menu.addEventListener("toggle", syncMenuButtonState);
       if ("ResizeObserver" in window) {
         const ro = new ResizeObserver(() => {
           const currentWidth = header.getBoundingClientRect().width;
@@ -611,20 +626,41 @@ function renderHeader(activePath) {
 function renderFooter() {
   return `
   <footer class="site-footer">
-    <div class="container footer-inner">
-      <div class="flex-wrap-row">
-        <span class="brand-mark">${ICONS.brandMark}</span>
-        <span><strong>Linnet Score</strong> · Sheet Music Recognition API &amp; Score SDK · London (eu-west-2)</span>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand-block">
+          <div class="footer-monogram" aria-hidden="true">${ICONS.brandMark}</div>
+          <div>
+            <div class="footer-brand-title">Linnet Score</div>
+            <p class="footer-brand-copy">Optical Music Recognition REST API &amp; Web Component SDK engineered for the UK and EU market.</p>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="footer-col-title">Platform</h3>
+          <ul class="footer-col-list">
+            <li><a href="/#playground">Live OMR Playground</a></li>
+            <li><a href="/#schools">API &amp; Educator Studio</a></li>
+            <li><a href="/#benchmarks">OMR Benchmarks</a></li>
+            <li><a href="/#linnet-app">Linnet Mobile App</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="footer-col-title">Developers</h3>
+          <ul class="footer-col-list">
+            <li><a href="/#pricing">UK GBP Pricing</a></li>
+            <li><a href="/auth">Get Free Sandbox Key</a></li>
+            <li><a href="/dashboard">Tenant Dashboard</a></li>
+            <li><a href="/practice/job_01j8x9k2m4p7q">Student Practice Room</a></li>
+          </ul>
+        </div>
       </div>
-      <nav class="footer-links" aria-label="Footer Navigation">
-        <a href="/#playground">Playground</a>
-        <a href="/#benchmarks">Benchmarks</a>
-        <a href="/#pricing">Pricing</a>
-        <a href="/auth">Get API Key</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/practice/job_01j8x9k2m4p7q">Practice Room</a>
-      </nav>
-      <div>Built on NoteAva OMR · Uploads auto-deleted after 24h</div>
+
+      <div class="footer-bottom">
+        <span>© 2026 Linnet Score · Built on NoteAva OMR</span>
+        <span>UK GDPR Ready · Client-Side Web Audio Synthesis</span>
+      </div>
     </div>
   </footer>`;
 }
@@ -657,25 +693,67 @@ function renderMarketingLandingPage(webOrigin = `http://localhost:${DEFAULT_WEB_
   ${renderHeader("/")}
 
   <main class="container main-section">
-    <!-- Hero Section -->
-    <section class="hero-section">
-      <div class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>London eu-west-2 · Sheet Music to MusicXML 4.0 &amp; Web Audio</div>
-      <h1 class="hero-title">Sheet Music Intelligence, Engineered for Developers.</h1>
-      <p class="hero-lead">
-        Powered by the optical music recognition engine behind <strong>Linnet</strong>. Embed our OMR REST API &amp; <code>&lt;linnet-score-player&gt;</code> SDK, share interactive practice links with students, or capture printed scores on mobile.
-      </p>
-      <div class="hero-actions">
-        <a href="/auth" class="btn btn-cypress">Get Free Sandbox Key</a>
-        <a href="/practice/job_01j8x9k2m4p7q" class="btn btn-sandstone">Try Student Practice Room</a>
+    <!-- Editorial Hero Stage with Flanking Tilted Visual Cards & Blur-to-Sharp Entrance -->
+    <section class="hero-stage">
+      <div class="hero-grid">
+        <aside class="hero-float-card hero-float-card--left" aria-hidden="true">
+          <div class="hero-float-face">
+            <div class="hero-card-kicker">Chopin · Op. 9 No. 2</div>
+            <svg viewBox="0 0 180 56" width="100%" height="56" style="display: block;">
+              <line x1="6" y1="12" x2="174" y2="12" stroke="#1C1917" stroke-opacity="0.35" stroke-width="1" />
+              <line x1="6" y1="20" x2="174" y2="20" stroke="#1C1917" stroke-opacity="0.35" stroke-width="1" />
+              <line x1="6" y1="28" x2="174" y2="28" stroke="#1C1917" stroke-opacity="0.35" stroke-width="1" />
+              <line x1="6" y1="36" x2="174" y2="36" stroke="#1C1917" stroke-opacity="0.35" stroke-width="1" />
+              <line x1="6" y1="44" x2="174" y2="44" stroke="#1C1917" stroke-opacity="0.35" stroke-width="1" />
+              <ellipse cx="34" cy="36" rx="4.8" ry="3.5" transform="rotate(-18 34 36)" fill="#1C1917" />
+              <line x1="38.5" y1="36" x2="38.5" y2="15" stroke="#1C1917" stroke-width="1.3" />
+              <ellipse cx="70" cy="24" rx="4.8" ry="3.5" transform="rotate(-18 70 24)" fill="#1B3B2B" />
+              <line x1="74.5" y1="24" x2="74.5" y2="6" stroke="#1B3B2B" stroke-width="1.3" />
+              <ellipse cx="106" cy="28" rx="4.8" ry="3.5" transform="rotate(-18 106 28)" fill="#1C1917" />
+              <line x1="110.5" y1="28" x2="110.5" y2="8" stroke="#1C1917" stroke-width="1.3" />
+              <ellipse cx="144" cy="32" rx="4.8" ry="3.5" transform="rotate(-18 144 32)" fill="#1C1917" />
+              <line x1="148.5" y1="32" x2="148.5" y2="12" stroke="#1C1917" stroke-width="1.3" />
+            </svg>
+            <div class="hero-card-stat">99.4% Pitch Fidelity</div>
+          </div>
+        </aside>
+
+        <div class="hero-center">
+          <div class="hero-emblem hero-blur-in" style="--reveal-delay: 0ms;" aria-hidden="true">${ICONS.brandMark}</div>
+
+          <h1 class="hero-title hero-blur-in" style="--reveal-delay: 60ms;">Sheet Music Intelligence, Engineered for Developers.</h1>
+          <p class="hero-lead hero-blur-in" style="--reveal-delay: 120ms;">
+            Powered by the optical music recognition engine behind <strong>Linnet</strong>. Embed our OMR REST API &amp; <code>&lt;linnet-score-player&gt;</code> SDK, share interactive practice links with students, or capture printed scores on mobile.
+          </p>
+
+          <div class="hero-actions hero-blur-in" style="--reveal-delay: 170ms;">
+            <a href="/auth" class="btn btn-cypress">Get Free Sandbox Key</a>
+            <a href="/practice/job_01j8x9k2m4p7q" class="btn btn-sandstone">Try Student Practice Room</a>
+          </div>
+          <a href="#linnet-app" class="hero-sublink hero-blur-in" style="--reveal-delay: 210ms;">Individual musician? Explore the Linnet mobile companion →</a>
+        </div>
+
+        <aside class="hero-float-card hero-float-card--right hero-float-card--dark" aria-hidden="true">
+          <div class="hero-float-face">
+            <div class="hero-card-kicker">POST /v1/omr/jobs</div>
+            <pre class="hero-card-code">&lt;note&gt;
+  &lt;pitch&gt;
+    &lt;step&gt;E&lt;/step&gt;
+    &lt;alter&gt;-1&lt;/alter&gt;
+    &lt;octave&gt;5&lt;/octave&gt;
+  &lt;/pitch&gt;
+&lt;/note&gt;</pre>
+            <div class="hero-card-stat">1.34s · MusicXML 4.0</div>
+          </div>
+        </aside>
       </div>
-      <a href="#linnet-app" class="hero-sublink">Individual musician? Explore the Linnet mobile companion →</a>
     </section>
 
     <!-- Interactive Live OMR Playground -->
     <section id="playground" class="cashmere-card" style="margin-bottom: 56px;">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
         <div>
-          <h2 class="section-title" style="margin-bottom: 4px;">Interactive Live OMR Playground</h2>
+          <h2 class="section-title blur-heading" style="margin-bottom: 4px;">Interactive Live OMR Playground</h2>
           <p style="margin: 0; color: var(--text-umber); font-size: 14px;">Upload a sheet music PDF or image, or pick a benchmark score to inspect the SVG engraving and audition playback.</p>
         </div>
         <span id="playground-telemetry" class="status-pill status-sage" aria-live="polite">200 OK · 1.38s · 99.2% Confidence · eu-west-2</span>
@@ -765,9 +843,120 @@ function renderMarketingLandingPage(webOrigin = `http://localhost:${DEFAULT_WEB_
       </div>
     </section>
 
+    <!-- Segmented Pill-Tab Workflow Showcase Deck -->
+    <section id="schools" class="showcase-section reveal-section">
+      <div class="showcase-header">
+        <div class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>Workflows &amp; SDK Architecture</div>
+        <h2 class="section-title blur-heading" style="margin-bottom: 10px;">Built for Developers, Music Schools &amp; Publishers.</h2>
+        <p style="margin: 0; color: var(--text-umber); font-size: 15px;">Explore each integration surface—from zero-dependency Web Component playback to no-code student practice links.</p>
+
+        <div class="showcase-pills" role="group" aria-label="Filter platform workflow cards">
+          <button type="button" class="showcase-pill" data-showcase-pill="all" aria-pressed="true">All</button>
+          <button type="button" class="showcase-pill" data-showcase-pill="api" aria-pressed="false">API &amp; SDK</button>
+          <button type="button" class="showcase-pill" data-showcase-pill="schools" aria-pressed="false">Music Schools</button>
+          <button type="button" class="showcase-pill" data-showcase-pill="playback" aria-pressed="false">Client Playback</button>
+          <button type="button" class="showcase-pill" data-showcase-pill="security" aria-pressed="false">UK Security</button>
+        </div>
+      </div>
+
+      <div class="showcase-deck" tabindex="0" role="region" aria-label="Linnet Score platform workflow cards">
+        <article class="showcase-card" data-showcase-card="api">
+          <div class="showcase-card-surface">
+            <div>
+              <span class="status-pill status-sage" style="margin-bottom: 10px;">For App Developers</span>
+              <h3 class="card-title" style="margin-bottom: 8px;">1. Digitize via API &amp; Embed <code>&lt;linnet-score-player&gt;</code></h3>
+              <p style="font-size: 14px; color: var(--text-umber);">Send a sheet music PDF or photo to our London <code>eu-west-2</code> gateway and render interactive notation in a few lines of code:</p>
+            </div>
+            <div class="copyable-code">
+              <pre id="landing-curl-snippet" class="alabaster-panel font-mono" style="margin: 0; font-size: 12px; overflow-x: auto; padding-right: 48px;">curl -X POST https://api.linnet.dev/v1/omr/jobs \\
+  -H "Authorization: Bearer lnt_live_8f9a..." \\
+  -F "file=@./chopin-nocturne.pdf"
+
+&lt;linnet-score-player job-id="job_01j8x9k2m4p7q" tempo="112" loop="true"&gt;&lt;/linnet-score-player&gt;</pre>
+              ${renderCopyControl("landing-curl-snippet", "Copy cURL and Web Component snippet")}
+            </div>
+          </div>
+        </article>
+
+        <article class="showcase-card" data-showcase-card="schools">
+          <div class="showcase-card-surface">
+            <div>
+              <span class="status-pill status-ochre" style="margin-bottom: 10px;">For Conservatoires &amp; Teachers</span>
+              <h3 class="card-title" style="margin-bottom: 8px;">2. No-Code Student Practice Links &amp; LMS Embeds</h3>
+              <p style="font-size: 14px; color: var(--text-umber);">
+                No engineering team required. Upload any sheet music PDF in the <strong>Educator Studio</strong> to give students a shareable practice link with tempo and loop controls:
+              </p>
+            </div>
+            <div class="alabaster-panel" style="display: flex; flex-direction: column; gap: 10px;">
+              <div class="copyable-wrap">
+                <div id="landing-practice-url" class="font-mono" style="font-size: 12px; color: var(--brand-cypress); word-break: break-all;">${webOrigin}/practice/job_01j8x9k2m4p7q</div>
+                ${renderCopyControl("landing-practice-url", "Copy Student Practice Room URL")}
+              </div>
+              <div class="flex-wrap-row">
+                <a href="/practice/job_01j8x9k2m4p7q" class="btn btn-cypress" style="padding: 7px 14px; font-size: 13px;">${ICONS.school} Open Live Student Practice Room →</a>
+                <a href="/dashboard#educator-studio" class="btn btn-sandstone" style="padding: 7px 14px; font-size: 13px;">Open Educator Studio</a>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="showcase-card" data-showcase-card="playback">
+          <div class="showcase-card-surface">
+            <div>
+              <span class="status-pill status-sage" style="margin-bottom: 10px;">Zero-Dependency SDK</span>
+              <h3 class="card-title" style="margin-bottom: 8px;">3. Client-Side SVG &amp; Web Audio Engine</h3>
+              <p style="font-size: 14px; color: var(--text-umber);">
+                API calls return structured MusicXML 4.0—never heavy server audio streams. Browser synthesis keeps playback instant, polyphonic, and zero-latency.
+              </p>
+            </div>
+            <div class="alabaster-panel" style="display: flex; flex-direction: column; gap: 10px;">
+              <svg viewBox="0 0 280 54" width="100%" height="54" aria-hidden="true" style="display: block;">
+                <line x1="8" y1="12" x2="272" y2="12" stroke="#1C1917" stroke-opacity="0.3" stroke-width="1" />
+                <line x1="8" y1="20" x2="272" y2="20" stroke="#1C1917" stroke-opacity="0.3" stroke-width="1" />
+                <line x1="8" y1="28" x2="272" y2="28" stroke="#1C1917" stroke-opacity="0.3" stroke-width="1" />
+                <line x1="8" y1="36" x2="272" y2="36" stroke="#1C1917" stroke-opacity="0.3" stroke-width="1" />
+                <line x1="8" y1="44" x2="272" y2="44" stroke="#1C1917" stroke-opacity="0.3" stroke-width="1" />
+                <line x1="126" y1="6" x2="126" y2="48" stroke="#1B3B2B" stroke-width="2" />
+                <ellipse cx="48" cy="36" rx="5" ry="3.6" transform="rotate(-18 48 36)" fill="#1C1917" />
+                <ellipse cx="88" cy="28" rx="5" ry="3.6" transform="rotate(-18 88 28)" fill="#1C1917" />
+                <ellipse cx="126" cy="20" rx="5" ry="3.6" transform="rotate(-18 126 20)" fill="#1B3B2B" />
+                <ellipse cx="174" cy="24" rx="5" ry="3.6" transform="rotate(-18 174 24)" fill="#1C1917" />
+                <ellipse cx="224" cy="32" rx="5" ry="3.6" transform="rotate(-18 224 32)" fill="#1C1917" />
+              </svg>
+              <div class="capability-pills">
+                <span class="capability-pill">104 BPM Lookahead</span>
+                <span class="capability-pill">Click-to-Audition</span>
+                <span class="capability-pill">A4 = 440 Hz</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="showcase-card" data-showcase-card="security">
+          <div class="showcase-card-surface">
+            <div>
+              <span class="status-pill status-ochre" style="margin-bottom: 10px;">Enterprise Isolation</span>
+              <h3 class="card-title" style="margin-bottom: 8px;">4. UK Residency &amp; Tenant Guardrails</h3>
+              <p style="font-size: 14px; color: var(--text-umber);">
+                Designed for regulated UK/EU education and publishing teams: ephemeral document storage, per-tenant RLS isolation, and origin-locked SDK embeds.
+              </p>
+            </div>
+            <div class="capability-pills">
+              <span class="capability-pill">eu-west-2 London</span>
+              <span class="capability-pill">24h Auto-Delete</span>
+              <span class="capability-pill">SHA-256 Key Vault</span>
+              <span class="capability-pill">PostgreSQL RLS</span>
+              <span class="capability-pill">CORS Origin Lock</span>
+              <span class="capability-pill">HMAC Webhooks</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <!-- Supported Score Types & Benchmark Transparency Matrix -->
     <section id="benchmarks" class="reveal-section" style="margin-bottom: 56px;">
-      <h2 id="benchmarks-heading" class="section-title" style="margin-bottom: 8px;">OMR Benchmark Baseline &amp; Supported Score Matrix</h2>
+      <h2 id="benchmarks-heading" class="section-title blur-heading" style="margin-bottom: 8px;">OMR Benchmark Baseline &amp; Supported Score Matrix</h2>
       <p style="color: var(--text-umber); margin-bottom: 20px;">
         We publish repeatable accuracy benchmarks across supported engraved score categories and clearly flag unsupported layouts before integration.
       </p>
@@ -800,73 +989,80 @@ function renderMarketingLandingPage(webOrigin = `http://localhost:${DEFAULT_WEB_
       </div>
     </section>
 
-    <!-- SDK Integration Showcase & No-Code Music School Studio -->
-    <section id="schools" class="split-grid split-grid--even reveal-section" style="margin-bottom: 56px;">
-      <div class="cashmere-card">
-        <span class="status-pill status-sage" style="margin-bottom: 10px;">For App Developers &amp; Music-Tech Products</span>
-        <h3 class="card-title" style="margin-bottom: 8px;">1. Digitize via API &amp; Embed <code>&lt;linnet-score-player&gt;</code></h3>
-        <p style="font-size: 14px; color: var(--text-umber);">Send a sheet music PDF/photo to our London <code>eu-west-2</code> Go Gateway and render interactive notation and sound in a few lines of code:</p>
-        <div class="copyable-code">
-          <pre id="landing-curl-snippet" class="alabaster-panel font-mono" style="font-size: 12px; overflow-x: auto; padding-right: 48px;">curl -X POST https://api.linnet.dev/v1/omr/jobs \\
-  -H "Authorization: Bearer lnt_live_8f9a..." \\
-  -F "file=@./chopin-nocturne.pdf"
+    <!-- Deep Lush Cypress Linnet Mobile App Showcase with Angled Phone Mockup -->
+    <section id="linnet-app" class="app-showcase reveal-section">
+      <div class="app-showcase-grid">
+        <div id="linnet-phone-stage" class="phone-stage">
+          <div class="linnet-phone" aria-hidden="true">
+            <div class="linnet-phone-speaker"></div>
+            <div class="linnet-phone-screen">
+              <div class="phone-screen-top">
+                <span>LINNET CAPTURE</span>
+                <span>99.4%</span>
+              </div>
+              <div class="phone-viewfinder">
+                <svg viewBox="0 0 180 68" width="100%" height="68" style="display: block;">
+                  <line x1="6" y1="16" x2="174" y2="16" stroke="#1C1917" stroke-opacity="0.35" stroke-width="1" />
+                  <line x1="6" y1="24" x2="174" y2="24" stroke="#1C1917" stroke-opacity="0.35" stroke-width="1" />
+                  <line x1="6" y1="32" x2="174" y2="32" stroke="#1C1917" stroke-opacity="0.35" stroke-width="1" />
+                  <line x1="6" y1="40" x2="174" y2="40" stroke="#1C1917" stroke-opacity="0.35" stroke-width="1" />
+                  <line x1="6" y1="48" x2="174" y2="48" stroke="#1C1917" stroke-opacity="0.35" stroke-width="1" />
+                  <ellipse cx="36" cy="40" rx="5" ry="3.6" transform="rotate(-18 36 40)" fill="#1C1917" />
+                  <line x1="40.5" y1="40" x2="40.5" y2="19" stroke="#1C1917" stroke-width="1.3" />
+                  <ellipse cx="78" cy="28" rx="5" ry="3.6" transform="rotate(-18 78 28)" fill="#1B3B2B" />
+                  <line x1="82.5" y1="28" x2="82.5" y2="9" stroke="#1B3B2B" stroke-width="1.4" />
+                  <ellipse cx="120" cy="32" rx="5" ry="3.6" transform="rotate(-18 120 32)" fill="#1C1917" />
+                  <line x1="124.5" y1="32" x2="124.5" y2="13" stroke="#1C1917" stroke-width="1.3" />
+                  <ellipse cx="154" cy="36" rx="5" ry="3.6" transform="rotate(-18 154 36)" fill="#1C1917" />
+                  <line x1="158.5" y1="36" x2="158.5" y2="16" stroke="#1C1917" stroke-width="1.3" />
+                </svg>
+                <div class="phone-scan-beam"></div>
+              </div>
+              <div class="phone-screen-bottom">
+                <span>Nocturne Op. 9 No. 2</span>
+                <span class="font-mono" style="color: #E4D6C8;">104 BPM</span>
+              </div>
+            </div>
+          </div>
 
-&lt;linnet-score-player job-id="job_01j8x9k2m4p7q" tempo="112" loop="true"&gt;&lt;/linnet-score-player&gt;</pre>
-          ${renderCopyControl("landing-curl-snippet", "Copy cURL and Web Component snippet")}
-        </div>
-      </div>
-      <div class="cashmere-card">
-        <span class="status-pill status-ochre" style="margin-bottom: 10px;">For Music Schools, Conservatoires &amp; Teachers</span>
-        <h3 class="card-title" style="margin-bottom: 8px;">2. No-Code Student Practice Links &amp; LMS Embeds</h3>
-        <p style="font-size: 14px; color: var(--text-umber);">
-          No engineering team required. Upload any sheet music PDF in the <strong>Educator Studio</strong> to give your students a dedicated practice link where they can hear the melody, slow down the tempo, and loop passages between lessons:
-        </p>
-        <div class="alabaster-panel" style="display: flex; flex-direction: column; gap: 10px;">
-          <div class="copyable-wrap">
-            <div id="landing-practice-url" class="font-mono" style="font-size: 12px; color: var(--brand-cypress); word-break: break-all;">${webOrigin}/practice/job_01j8x9k2m4p7q</div>
-            ${renderCopyControl("landing-practice-url", "Copy Student Practice Room URL")}
+          <div class="phone-orbit-row" aria-hidden="true">
+            <span class="phone-orbit-chip phone-orbit-chip--tl">99.4% Pitch</span>
+            <span class="phone-orbit-chip phone-orbit-chip--tr">MusicXML 4.0</span>
+            <span class="phone-orbit-chip phone-orbit-chip--bl">1.34s Scan</span>
+            <span class="phone-orbit-chip phone-orbit-chip--br">eu-west-2</span>
           </div>
-          <div class="flex-wrap-row">
-            <a href="/practice/job_01j8x9k2m4p7q" class="btn btn-cypress" style="padding: 7px 14px; font-size: 13px;">${ICONS.school} Open Live Student Practice Room →</a>
-            <a href="/dashboard#educator-studio" class="btn btn-sandstone" style="padding: 7px 14px; font-size: 13px;">Open Educator Studio</a>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- Linnet Mobile App for Musicians & Students -->
-    <section id="linnet-app" class="cashmere-card reveal-section" style="margin-bottom: 56px; background: var(--brand-cypress); color: var(--bg-alabaster);">
-      <div class="split-grid split-grid--app">
-        <div>
-          <span class="status-pill" style="background: rgba(250, 246, 240, 0.15); color: var(--bg-alabaster); margin-bottom: 14px;">${ICONS.phone} For Individual Musicians &amp; Music Students · Powered by NoteAva</span>
-          <h2 class="section-title" style="color: var(--bg-alabaster); margin-bottom: 12px;">The Linnet App: Take a Photo of Sheet Music &amp; Hear It Play.</h2>
-          <p style="color: var(--border-sandstone); font-size: 15.5px; margin-bottom: 18px;">
-            Practicing at home and unsure how a measure, rhythm, or interval is supposed to sound? With the <strong>Linnet</strong> mobile practice companion, snap a photo of your paper sheet music and listen to an accurate playback immediately—without waiting until your next music lesson.
-          </p>
-          <ul style="color: var(--border-sandstone); font-size: 14px; padding-left: 20px; margin-bottom: 22px;">
-            <li><strong>Instant Camera-to-Sound Scanning:</strong> Photograph any printed exercise or piece and hear the melody and rhythm.</li>
-            <li><strong>Step-by-Step Student Practice:</strong> Adjust tempo, loop tricky passages, and verify notes &amp; timing with confidence.</li>
-          </ul>
-          <div class="flex-wrap-row">
-            <span class="btn" style="background: rgba(250, 246, 240, 0.12); color: var(--bg-alabaster); border-color: rgba(228, 214, 200, 0.3); cursor: default;">App Store (Coming Soon)</span>
-            <span class="btn" style="background: rgba(250, 246, 240, 0.12); color: var(--bg-alabaster); border-color: rgba(228, 214, 200, 0.3); cursor: default;">Google Play (Coming Soon)</span>
-          </div>
+          <button type="button" id="phone-motion-toggle" class="phone-motion-toggle">Pause motion</button>
         </div>
 
-        <form id="app-waitlist-form" class="alabaster-panel" style="color: var(--text-obsidian); display: flex; flex-direction: column; gap: 12px;">
-          <div class="font-serif" style="font-size: 24px;">Get Early Access &amp; Direct App Download Link</div>
-          <p style="margin: 0; font-size: 13px; color: var(--text-umber);">
-            Enter your UK/international mobile number (SMS) or email to receive the direct beta download &amp; instant notification when <strong>Linnet</strong> goes live on the App Store and Google Play:
-          </p>
-          <input type="text" id="waitlist-contact-input" placeholder="+44 7700 900077 or student@music.ac.uk" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-sandstone); font: inherit;" />
-          <select id="waitlist-platform-select" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-sandstone); font: inherit; background: var(--bg-alabaster);">
-            <option value="ios_and_android">iOS (iPhone / iPad) &amp; Android</option>
-            <option value="ios">iOS App Store Only</option>
-            <option value="android">Google Play / Direct Android APK</option>
-          </select>
-          <button type="submit" class="btn btn-cypress">Notify Me &amp; Send Early Access Link</button>
-          <div id="waitlist-status-msg" aria-live="polite" style="font-size: 12.5px; color: var(--status-sage);"></div>
-        </form>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div>
+            <span class="status-pill" style="background: rgba(250, 246, 240, 0.15); color: var(--bg-alabaster); margin-bottom: 12px;">${ICONS.phone} For Individual Musicians &amp; Music Students · Powered by NoteAva</span>
+            <h2 class="section-title blur-heading" style="color: var(--bg-alabaster); margin-bottom: 12px;">The Linnet App: Photograph Printed Music &amp; Hear It Play.</h2>
+            <p style="color: var(--border-sandstone); font-size: 15px; margin: 0 0 14px;">
+              Practicing at home and unsure how a measure, rhythm, or interval is supposed to sound? Snap a photo of paper sheet music and listen to an accurate playback immediately between lessons.
+            </p>
+            <div class="flex-wrap-row">
+              <span class="btn" style="background: rgba(250, 246, 240, 0.12); color: var(--bg-alabaster); border-color: rgba(228, 214, 200, 0.3); cursor: default;">App Store (Coming Soon)</span>
+              <span class="btn" style="background: rgba(250, 246, 240, 0.12); color: var(--bg-alabaster); border-color: rgba(228, 214, 200, 0.3); cursor: default;">Google Play (Coming Soon)</span>
+            </div>
+          </div>
+
+          <form id="app-waitlist-form" class="alabaster-panel" style="color: var(--text-obsidian); display: flex; flex-direction: column; gap: 12px;">
+            <div class="font-serif" style="font-size: 22px;">Get Early Access &amp; Direct App Link</div>
+            <p style="margin: 0; font-size: 13px; color: var(--text-umber);">
+              Enter your mobile number (SMS) or email for the direct beta download when <strong>Linnet</strong> launches on iOS and Android:
+            </p>
+            <input type="text" id="waitlist-contact-input" placeholder="+44 7700 900077 or student@music.ac.uk" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-sandstone); font: inherit;" />
+            <select id="waitlist-platform-select" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-sandstone); font: inherit; background: var(--bg-alabaster);">
+              <option value="ios_and_android">iOS (iPhone / iPad) &amp; Android</option>
+              <option value="ios">iOS App Store Only</option>
+              <option value="android">Google Play / Direct Android APK</option>
+            </select>
+            <button type="submit" class="btn btn-cypress">Notify Me &amp; Send Early Access Link</button>
+            <div id="waitlist-status-msg" aria-live="polite" style="font-size: 12.5px; color: var(--status-sage);"></div>
+          </form>
+        </div>
       </div>
     </section>
 
@@ -874,7 +1070,7 @@ function renderMarketingLandingPage(webOrigin = `http://localhost:${DEFAULT_WEB_
     <section id="pricing" class="cashmere-card reveal-section">
       <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <div style="flex: 1 1 320px;">
-          <h2 class="section-title" style="margin-bottom: 6px;">Transparent UK GBP (£) Pricing Calculator</h2>
+          <h2 class="section-title blur-heading" style="margin-bottom: 6px;">Transparent UK GBP (£) Pricing Calculator</h2>
           <p style="margin: 0; color: var(--text-umber);">Start with 50 free pages in the Sandbox Tier (no credit card required). Configure hard spend caps on any paid plan.</p>
         </div>
         <div class="alabaster-panel pricing-calc-box">
@@ -1141,6 +1337,65 @@ function renderMarketingLandingPage(webOrigin = `http://localhost:${DEFAULT_WEB_
         updateRecommendedTier("scale");
       }
     });
+
+    // Segmented Pill-Tab Workflow Showcase Interactivity
+    const showcasePills = Array.from(document.querySelectorAll("[data-showcase-pill]"));
+    const showcaseCards = Array.from(document.querySelectorAll("[data-showcase-card]"));
+    const showcaseDeck = document.querySelector(".showcase-deck");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    showcasePills.forEach((pill) => {
+      pill.addEventListener("click", () => {
+        const key = pill.getAttribute("data-showcase-pill");
+        showcasePills.forEach((btn) => btn.setAttribute("aria-pressed", String(btn === pill)));
+
+        if (key === "all") {
+          showcaseCards.forEach((card) => card.classList.remove("is-highlighted"));
+          showcaseDeck?.scrollTo({ left: 0, behavior: reducedMotion ? "auto" : "smooth" });
+          return;
+        }
+
+        const targetCard = showcaseCards.find((card) => card.getAttribute("data-showcase-card") === key);
+        showcaseCards.forEach((card) => card.classList.toggle("is-highlighted", card === targetCard));
+        targetCard?.scrollIntoView({
+          behavior: reducedMotion ? "auto" : "smooth",
+          inline: "center",
+          block: "nearest"
+        });
+      });
+    });
+
+    // Mobile Phone Stage Motion Toggle (WCAG 2.2.2)
+    const phoneStage = document.getElementById("linnet-phone-stage");
+    const phoneMotionToggle = document.getElementById("phone-motion-toggle");
+    phoneMotionToggle?.addEventListener("click", () => {
+      if (!phoneStage) return;
+      const paused = phoneStage.classList.toggle("is-paused");
+      phoneMotionToggle.textContent = paused ? "Resume motion" : "Pause motion";
+    });
+
+    // Blur-to-sharp heading reveal fallback for browsers without Scroll-Driven ViewTimeline support
+    if (!CSS.supports("(animation-timeline: view()) and (animation-range: entry)") &&
+        window.matchMedia("(prefers-reduced-motion: no-preference)").matches &&
+        "IntersectionObserver" in window) {
+      const blurHeadings = Array.from(document.querySelectorAll(".blur-heading"));
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              entry.target.classList.remove("is-fallback-pending");
+              entry.target.classList.add("is-revealed");
+              observer.unobserve(entry.target);
+            }
+          }
+        },
+        { threshold: 0.15 }
+      );
+      blurHeadings.forEach((el) => {
+        el.classList.add("is-fallback-pending");
+        observer.observe(el);
+      });
+    }
 
     // Linnet Mobile App Waitlist Handler
     const waitlistForm = document.getElementById("app-waitlist-form");

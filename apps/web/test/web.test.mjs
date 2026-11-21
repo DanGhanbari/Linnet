@@ -132,6 +132,15 @@ test("Phase 2 & 3 Exit Gates: Landing Page Playground, SMS OTP Auth + 60s Sandbo
   assert.ok(freshLandingHtml.includes('data-tier-card="scale"'));
   assert.ok(freshLandingHtml.includes('command="--copy"'));
   assert.ok(freshLandingHtml.includes('<footer class="site-footer"'));
+  assert.ok(freshLandingHtml.includes('class="hero-stage"'));
+  assert.ok(freshLandingHtml.includes('hero-float-card'));
+  assert.ok(freshLandingHtml.includes('class="showcase-deck"'));
+  assert.ok(freshLandingHtml.includes('class="linnet-phone"'));
+  assert.ok(freshLandingHtml.includes('class="footer-monogram"'));
+  assert.ok(!freshLandingHtml.includes("London eu-west-2 · Sheet Music to MusicXML 4.0 &amp; Web Audio"));
+  assert.ok(!freshLandingHtml.includes('class="hero-trio"'));
+  assert.ok(freshLandingHtml.includes('aria-label="Open navigation menu"'));
+  assert.ok(freshLandingHtml.includes('class="menu-icon"'));
 
   const forbiddenTokens = [
     "🎹",

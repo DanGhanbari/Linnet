@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -40,5 +41,13 @@ test("S-05 & D-03: renderScoreToSVG engraves #FAF6F0 Warm Alabaster canvas, #1C1
   assert.ok(svg.includes('data-pitch='), "Should emit data-pitch metadata for live pitch readout");
   assert.ok(svg.includes('role="button"'), "Should mark playable notes as interactive buttons");
   assert.ok(svg.includes("linnet-playback-cursor"), "Should render playback cursor element");
+});
+
+test("Transport bar locks dynamic widths to prevent playback layout flicker", () => {
+  const source = readFileSync(new URL("../src/linnet-score-player.mjs", import.meta.url), "utf8");
+  assert.ok(source.includes("min-inline-size: 122px;"), "Play/Pause toggle should have locked minimum width");
+  assert.ok(source.includes("inline-size: 160px;"), "Pitch readout pill should have fixed inline width");
+  assert.ok(source.includes("min-inline-size: 126px;"), "Measure counter pill should have locked minimum width");
+  assert.ok(source.includes("font-variant-numeric: tabular-nums;"), "Dynamic numeric readouts should use tabular-nums");
 });
 

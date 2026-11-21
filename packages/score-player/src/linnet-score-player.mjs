@@ -35,6 +35,10 @@ const PLAYER_CSS = `
   display: none;
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 button, input, select {
   font: inherit;
   color: inherit;
@@ -141,6 +145,7 @@ input:focus-visible,
 
 .transport-group {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -153,6 +158,8 @@ input:focus-visible,
   gap: 6px;
   border-radius: 8px;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, scale 120ms ease-out;
 }
 
@@ -163,6 +170,10 @@ input:focus-visible,
   padding: 7px 14px;
   font-size: 13px;
   font-weight: 600;
+}
+
+.btn-primary[data-action="play-toggle"] {
+  min-inline-size: 122px;
 }
 
 .btn-primary:hover {
@@ -196,12 +207,22 @@ input:focus-visible,
 }
 
 .tempo-control {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: var(--_text-umber);
+  white-space: nowrap;
+}
+
+[data-tempo-label] {
+  display: inline-block;
+  inline-size: 7.5ch;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .tempo-slider {
@@ -216,12 +237,32 @@ input:focus-visible,
   align-items: center;
   gap: 7px;
   font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 11.5px;
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--_bg-alabaster);
   border: 1px solid var(--_border-sandstone);
   color: var(--_text-umber);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.pitch-pill {
+  inline-size: 160px;
+  max-inline-size: 100%;
+  justify-content: flex-start;
+}
+
+[data-pitch-readout] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.measure-pill {
+  min-inline-size: 126px;
+  justify-content: center;
 }
 
 .pitch-pill[data-live="true"] {
@@ -234,21 +275,23 @@ input:focus-visible,
   align-items: flex-end;
   gap: 2px;
   height: 11px;
+  flex-shrink: 0;
 }
 
 .eq-bars span {
   display: block;
   width: 2.5px;
-  height: 4px;
+  height: 10px;
   border-radius: 999px;
   background: var(--_brand-cypress);
   opacity: 0.4;
+  transform: scaleY(0.35);
   transform-origin: bottom;
 }
 
 .player-shell[data-playing="true"] .eq-bars span {
   opacity: 1;
-  height: 10px;
+  transform: scaleY(1);
 }
 
 @media (prefers-reduced-motion: no-preference) {
