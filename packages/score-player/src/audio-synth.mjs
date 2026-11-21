@@ -1,5 +1,5 @@
 /**
- * Linnet Score — Client-Side Web Audio API Synthesizer & Lookahead Scheduler (Deliverable S-06 & Decision D-04)
+ * Linnet Score — Client-Side Web Audio API Synthesizer & Lookahead Scheduler
  * Uses a 25ms scheduling tick and 100ms lookahead window on AudioContext.currentTime for jitter-free playback.
  */
 
@@ -82,6 +82,20 @@ export class ScoreAudioSynthesizer {
     oscHarmonic.stop(startTime + durationSec);
   }
 
+  async previewNote(frequencyHz, durationSec = 0.42) {
+    if (!frequencyHz || frequencyHz <= 0) return;
+    const resumePromise = this.ensureAudioContext();
+    if (resumePromise) {
+      try {
+        await resumePromise;
+      } catch {
+        return;
+      }
+    }
+    if (!this.audioCtx) return;
+    this.scheduleWarmPianoTone(frequencyHz, this.audioCtx.currentTime + 0.01, durationSec);
+  }
+
   async play() {
     if (!this.flattenedNotes.length || this.isPlaying) return;
     const resumePromise = this.ensureAudioContext();
@@ -122,10 +136,12 @@ export class ScoreAudioSynthesizer {
           this.scheduleWarmPianoTone(note.frequencyHz, this.nextNoteTime, durationSec);
         }
 
+        const acc = note.alter === 1 ? "♯" : note.alter === -1 ? "♭" : "";
         this.onStepChange({
           measureNumber: note.measureNumber,
           globalNoteIndex: note.globalIndex,
-          pitch: note.step ? `${note.step}${note.octave}` : "Rest"
+          pitch: note.step ? `${note.step}${acc}${note.octave}` : "Rest",
+          frequencyHz: note.isRest ? 0 : note.frequencyHz || 0
         });
 
         this.nextNoteTime += durationSec;
@@ -151,7 +167,8 @@ export class ScoreAudioSynthesizer {
     this.onStepChange({
       measureNumber: 1,
       globalNoteIndex: -1,
-      pitch: null
+      pitch: null,
+      frequencyHz: 0
     });
   }
 
@@ -164,17 +181,28 @@ export class ScoreAudioSynthesizer {
     this.loopEnabled = Boolean(enabled);
   }
 
+  seekToNote(globalNoteIndex) {
+    if (!this.flattenedNotes.length) return;
+    const clamped = Math.max(0, Math.min(this.flattenedNotes.length - 1, Number(globalNoteIndex) || 0));
+    this.currentNoteIndex = clamped;
+    const target = this.flattenedNotes[clamped];
+    if (this.isPlaying) {
+      const currentTime = this.audioCtx ? this.audioCtx.currentTime : performance.now() / 1000;
+      this.nextNoteTime = currentTime + 0.04;
+    }
+    const acc = target.alter === 1 ? "♯" : target.alter === -1 ? "♭" : "";
+    this.onStepChange({
+      measureNumber: target.measureNumber,
+      globalNoteIndex: target.globalIndex,
+      pitch: target.step ? `${target.step}${acc}${target.octave}` : "Rest",
+      frequencyHz: target.isRest ? 0 : target.frequencyHz || 0
+    });
+  }
+
   seekToMeasure(measureNumber) {
     const idx = this.flattenedNotes.findIndex((n) => n.measureNumber === Number(measureNumber));
     if (idx >= 0) {
-      this.currentNoteIndex = idx;
-      const target = this.flattenedNotes[idx];
-      this.onStepChange({
-        measureNumber: target.measureNumber,
-        globalNoteIndex: target.globalIndex,
-        pitch: target.step ? `${target.step}${target.octave}` : "Rest"
-      });
+      this.seekToNote(idx);
     }
   }
 }
-

@@ -123,4 +123,46 @@ test("Phase 2 & 3 Exit Gates: Landing Page Playground, SMS OTP Auth + 60s Sandbo
   assert.ok(
     proxiedDashRes.text().includes("https://linnet-demo.up.railway.app/practice/job_01j8x9k2m4p7q?preset=solo_piano")
   );
+
+  // 9. Verify natural editorial polish, copy controls, scan overlay, and zero emojis or internal spec boilerplate
+  const landingCheckRes = await server.dispatchRequest({ method: "GET", path: "/" });
+  assert.equal(landingCheckRes.status, 200);
+  const freshLandingHtml = landingCheckRes.text();
+  assert.ok(freshLandingHtml.includes('id="playground-scan-overlay"'));
+  assert.ok(freshLandingHtml.includes('data-tier-card="scale"'));
+  assert.ok(freshLandingHtml.includes('command="--copy"'));
+  assert.ok(freshLandingHtml.includes('<footer class="site-footer"'));
+
+  const forbiddenTokens = [
+    "🎹",
+    "🎶",
+    "🎷",
+    "🎓",
+    "📱",
+    "🔑",
+    "🐙",
+    "🏢",
+    "✦",
+    "",
+    "▶",
+    "Deliverable S-",
+    "Charter D-",
+    "Risk R-",
+    "Out of P0 Scope",
+    "P0 Supported"
+  ];
+
+  for (const [routeLabel, htmlBody] of [
+    ["/", freshLandingHtml],
+    ["/auth", authRes.text()],
+    ["/dashboard", dashHtml],
+    ["/practice", practiceHtml]
+  ]) {
+    for (const token of forbiddenTokens) {
+      assert.ok(
+        !htmlBody.includes(token),
+        `Route ${routeLabel} must not contain leftover boilerplate or emoji token "${token}"`
+      );
+    }
+  }
 });

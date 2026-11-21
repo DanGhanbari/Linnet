@@ -1,10 +1,8 @@
 /**
- * Linnet Score — <linnet-score-player> Autonomous Custom Element (Deliverables S-05, S-06, Decisions D-03, D-04)
- * Implements Modern Web Guidance best practices:
- * - Shared constructed CSSStyleSheet via `adoptedStyleSheets` (no per-instance style re-parse)
- * - Private `--_*` custom properties on `:host` reading public `--linnet-*` variables (no `:host-context()`)
- * - Explicit `font: inherit; color: inherit;` on internal `<button>` and `<input>` elements inside Shadow DOM
- * - Same-tree ARIA labels and `::part(canvas)` / `::part(transport)` exposure
+ * Linnet Score — <linnet-score-player> Autonomous Custom Element
+ * - Shared constructed CSSStyleSheet via `adoptedStyleSheets`
+ * - Zero-teardown SVG highlight & gliding compositor playback cursor
+ * - Click-to-audition & keyboard-accessible note seeking
  */
 
 import { parseMusicXML, BENCHMARK_SCORES } from "./musicxml-parser.mjs";
@@ -71,6 +69,65 @@ input:focus-visible,
   display: block;
 }
 
+/* Engraved SVG interactivity & smooth gliding playback cursor */
+.measure-highlight {
+  fill: #2E5A44;
+  fill-opacity: 0;
+  transition: fill-opacity 180ms ease;
+}
+
+.linnet-measure.is-active .measure-highlight {
+  fill-opacity: 0.08;
+}
+
+.linnet-note {
+  cursor: pointer;
+  outline: none;
+}
+
+.linnet-note .note-halo {
+  fill: #2E5A44;
+  fill-opacity: 0;
+  transition: fill-opacity 140ms ease;
+}
+
+.linnet-note:hover .note-halo,
+.linnet-note:focus-visible .note-halo {
+  fill-opacity: 0.14;
+}
+
+.linnet-note.is-active .note-halo {
+  fill-opacity: 0.24;
+}
+
+.linnet-note.is-active ellipse {
+  fill: #1B3B2B;
+  stroke: #1B3B2B;
+}
+
+.linnet-note.is-active line {
+  stroke: #1B3B2B;
+}
+
+.linnet-note:focus-visible ellipse {
+  stroke: #1B3B2B;
+  stroke-width: 2.3;
+}
+
+.linnet-playback-cursor {
+  opacity: 0.35;
+}
+
+.linnet-playback-cursor[data-active="true"] {
+  opacity: 0.95;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .linnet-playback-cursor {
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+  }
+}
+
 .transport-bar {
   display: flex;
   flex-wrap: wrap;
@@ -88,31 +145,48 @@ input:focus-visible,
   gap: 8px;
 }
 
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, scale 120ms ease-out;
+}
+
 .btn-primary {
   background: var(--_brand-cypress);
   color: var(--_bg-alabaster);
   border: 1px solid var(--_brand-cypress);
-  border-radius: 8px;
   padding: 7px 14px;
   font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
-  transition: background 150ms ease;
 }
 
 .btn-primary:hover {
   background: var(--_accent-moss);
+  box-shadow: 0 2px 8px rgba(27, 59, 43, 0.22);
 }
 
 .btn-secondary {
   background: var(--_bg-alabaster);
   color: var(--_text-obsidian);
   border: 1px solid var(--_border-sandstone);
-  border-radius: 8px;
   padding: 7px 12px;
   font-size: 12.5px;
   font-weight: 500;
-  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: rgba(228, 214, 200, 0.5);
+  box-shadow: 0 2px 6px rgba(28, 25, 23, 0.08);
+}
+
+.btn-primary:active,
+.btn-secondary:active {
+  scale: 0.97;
 }
 
 .btn-secondary[aria-pressed="true"] {
@@ -136,7 +210,11 @@ input:focus-visible,
   width: 96px;
 }
 
-.measure-pill {
+.measure-pill,
+.pitch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11.5px;
   padding: 4px 10px;
@@ -144,6 +222,60 @@ input:focus-visible,
   background: var(--_bg-alabaster);
   border: 1px solid var(--_border-sandstone);
   color: var(--_text-umber);
+}
+
+.pitch-pill[data-live="true"] {
+  color: var(--_brand-cypress);
+  border-color: rgba(27, 59, 43, 0.35);
+}
+
+.eq-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+
+.eq-bars span {
+  display: block;
+  width: 2.5px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--_brand-cypress);
+  opacity: 0.4;
+  transform-origin: bottom;
+}
+
+.player-shell[data-playing="true"] .eq-bars span {
+  opacity: 1;
+  height: 10px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .player-shell[data-playing="true"] .eq-bars span {
+    animation: eq-pulse 0.72s ease-in-out infinite alternate;
+  }
+
+  .player-shell[data-playing="true"] .eq-bars span:nth-child(2) {
+    animation-delay: 0.14s;
+  }
+
+  .player-shell[data-playing="true"] .eq-bars span:nth-child(3) {
+    animation-delay: 0.28s;
+  }
+
+  .player-shell[data-playing="true"] .eq-bars span:nth-child(4) {
+    animation-delay: 0.42s;
+  }
+}
+
+@keyframes eq-pulse {
+  from {
+    transform: scaleY(0.35);
+  }
+  to {
+    transform: scaleY(1);
+  }
 }
 
 @container (max-width: 640px) {
@@ -209,13 +341,23 @@ export function defineLinnetScorePlayer() {
 
   const template = document.createElement("template");
   template.innerHTML = `
-    <div class="player-shell">
+    <div class="player-shell" data-playing="false">
       <div class="score-canvas" part="canvas" data-canvas tabindex="0" role="region" aria-label="Scrollable musical score notation"></div>
       <div class="transport-bar" part="transport" role="toolbar" aria-label="Score playback controls">
         <div class="transport-group">
-          <button type="button" class="btn-primary" data-action="play-toggle" aria-label="Play or pause score">▶ Play Score</button>
-          <button type="button" class="btn-secondary" data-action="stop" aria-label="Stop playback">⏹ Stop</button>
-          <button type="button" class="btn-secondary" data-action="loop-toggle" aria-pressed="false">↻ Loop</button>
+          <button type="button" class="btn-primary" data-action="play-toggle" aria-label="Play or pause score">
+            <svg data-icon-play aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"></polygon></svg>
+            <svg data-icon-pause hidden aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg>
+            <span data-play-label>Play Score</span>
+          </button>
+          <button type="button" class="btn-secondary" data-action="stop" aria-label="Stop playback">
+            <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>
+            <span>Stop</span>
+          </button>
+          <button type="button" class="btn-secondary" data-action="loop-toggle" aria-pressed="false">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+            <span>Loop</span>
+          </button>
         </div>
         <div class="transport-group">
           <label class="tempo-control">
@@ -223,8 +365,12 @@ export function defineLinnetScorePlayer() {
             <input type="range" class="tempo-slider" min="60" max="180" value="112" data-action="tempo-Input" aria-label="Playback tempo BPM" />
             <span data-tempo-label>112 BPM</span>
           </label>
+          <span class="pitch-pill" data-pitch-wrap data-live="false">
+            <span class="eq-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+            <span data-pitch-readout>Click any note</span>
+          </span>
           <span class="measure-pill" data-measure-status>Measure 1 / 4</span>
-          <button type="button" class="btn-secondary" data-action="p1-feedback" hidden title="Charter S-14 Demand Signal">✦ Request Score Editing (P1)</button>
+          <button type="button" class="btn-secondary" data-action="p1-feedback" hidden>Request Notation Editing</button>
         </div>
       </div>
     </div>
@@ -248,23 +394,27 @@ export function defineLinnetScorePlayer() {
         this.shadowRoot.append(styleEl);
       }
 
-      // MANDATORY: deep-clone the template content so each instance gets its own nodes.
+      // Deep-clone the template content so each instance gets its own nodes.
       this.shadowRoot.append(template.content.cloneNode(true));
 
       this.scoreModel = parseMusicXML(BENCHMARK_SCORES.solo_piano.musicXML);
       this.activeMeasure = 1;
       this.activeNoteGlobalIndex = -1;
+      this.activePitch = null;
+      this.activeFrequencyHz = 0;
 
       this.synth = new ScoreAudioSynthesizer({
-        onStepChange: ({ measureNumber, globalNoteIndex }) => {
+        onStepChange: ({ measureNumber, globalNoteIndex, pitch, frequencyHz }) => {
           this.activeMeasure = measureNumber;
           this.activeNoteGlobalIndex = globalNoteIndex;
-          this.renderCanvas();
+          this.activePitch = pitch || null;
+          this.activeFrequencyHz = frequencyHz || 0;
+          this.updatePlaybackHighlight();
           this.dispatchEvent(
             new CustomEvent("linnet:measurechange", {
               bubbles: true,
               composed: true,
-              detail: { measure: measureNumber, noteIndex: globalNoteIndex }
+              detail: { measure: measureNumber, noteIndex: globalNoteIndex, pitch, frequencyHz }
             })
           );
         },
@@ -309,6 +459,7 @@ export function defineLinnetScorePlayer() {
       if (BENCHMARK_SCORES[presetKey]) {
         this.scoreModel = parseMusicXML(BENCHMARK_SCORES[presetKey].musicXML);
         this.synth.loadScore(this.scoreModel);
+        this.updatePlayButtonLabel(false);
       }
 
       const tempoAttr = this.getAttribute("tempo");
@@ -333,6 +484,7 @@ export function defineLinnetScorePlayer() {
       const loopBtn = this.shadowRoot.querySelector('[data-action="loop-toggle"]');
       const tempoSlider = this.shadowRoot.querySelector('[data-action="tempo-Input"]');
       const feedbackBtn = this.shadowRoot.querySelector('[data-action="p1-feedback"]');
+      const canvas = this.shadowRoot.querySelector("[data-canvas]");
 
       playBtn?.addEventListener("click", () => {
         if (this.synth.isPlaying) {
@@ -357,9 +509,33 @@ export function defineLinnetScorePlayer() {
           new CustomEvent("linnet:feedback", {
             bubbles: true,
             composed: true,
-            detail: { feature: "S-14_score_editing_sdk", requestedAt: new Date().toISOString() }
+            detail: { feature: "score_editing_sdk", requestedAt: new Date().toISOString() }
           })
         );
+      });
+
+      const activateNoteElement = (noteEl) => {
+        if (!noteEl) return;
+        const noteIdx = Number(noteEl.getAttribute("data-note-index"));
+        const freq = Number(noteEl.getAttribute("data-freq"));
+        if (Number.isNaN(noteIdx)) return;
+        this.synth.seekToNote(noteIdx);
+        if (!this.synth.isPlaying && freq > 0) {
+          this.synth.previewNote(freq);
+        }
+      };
+
+      canvas?.addEventListener("click", (e) => {
+        const noteEl = e.target.closest?.(".linnet-note");
+        activateNoteElement(noteEl);
+      });
+
+      canvas?.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        const noteEl = e.target.closest?.(".linnet-note");
+        if (!noteEl) return;
+        e.preventDefault();
+        activateNoteElement(noteEl);
       });
     }
 
@@ -367,6 +543,7 @@ export function defineLinnetScorePlayer() {
       this.scoreModel = parseMusicXML(xmlString);
       this.synth.loadScore(this.scoreModel);
       this.setTempo(this.scoreModel.defaultTempo);
+      this.updatePlayButtonLabel(false);
       this.renderCanvas();
     }
 
@@ -385,7 +562,7 @@ export function defineLinnetScorePlayer() {
     stop() {
       this.synth.stop();
       this.updatePlayButtonLabel(false);
-      this.renderCanvas();
+      this.updatePlaybackHighlight();
     }
 
     setTempo(bpm) {
@@ -405,27 +582,81 @@ export function defineLinnetScorePlayer() {
     }
 
     updatePlayButtonLabel(playing) {
-      const playBtn = this.shadowRoot.querySelector('[data-action="play-toggle"]');
-      if (playBtn) {
-        playBtn.textContent = playing ? "⏸ Pause" : "▶ Play Score";
+      const shell = this.shadowRoot.querySelector(".player-shell");
+      const playIcon = this.shadowRoot.querySelector("[data-icon-play]");
+      const pauseIcon = this.shadowRoot.querySelector("[data-icon-pause]");
+      const playLabel = this.shadowRoot.querySelector("[data-play-label]");
+      if (shell) shell.setAttribute("data-playing", String(Boolean(playing)));
+      if (playIcon) playIcon.hidden = Boolean(playing);
+      if (pauseIcon) pauseIcon.hidden = !Boolean(playing);
+      if (playLabel) playLabel.textContent = playing ? "Pause" : "Play Score";
+    }
+
+    updatePlaybackHighlight() {
+      const canvas = this.shadowRoot.querySelector("[data-canvas]");
+      const status = this.shadowRoot.querySelector("[data-measure-status]");
+      const pitchWrap = this.shadowRoot.querySelector("[data-pitch-wrap]");
+      const pitchReadout = this.shadowRoot.querySelector("[data-pitch-readout]");
+
+      if (canvas) {
+        canvas.querySelectorAll(".linnet-measure.is-active").forEach((m) => m.classList.remove("is-active"));
+        const activeMeasureEl = canvas.querySelector(`.linnet-measure[data-measure-number="${this.activeMeasure}"]`);
+        activeMeasureEl?.classList.add("is-active");
+
+        canvas.querySelectorAll(".linnet-note.is-active").forEach((n) => n.classList.remove("is-active"));
+        const activeNoteEl =
+          this.activeNoteGlobalIndex >= 0
+            ? canvas.querySelector(`.linnet-note[data-note-index="${this.activeNoteGlobalIndex}"]`)
+            : null;
+        activeNoteEl?.classList.add("is-active");
+
+        const cursor = canvas.querySelector(".linnet-playback-cursor");
+        if (cursor) {
+          const defaultX = cursor.getAttribute("data-default-x") || "122";
+          const targetX = activeNoteEl?.getAttribute("data-x") || defaultX;
+          cursor.style.transform = `translateX(${targetX}px)`;
+          cursor.setAttribute("data-active", this.activeNoteGlobalIndex >= 0 ? "true" : "false");
+        }
+
+        // Keep active note visible inside swipeable mobile score canvas without scrolling the page
+        if (activeNoteEl && canvas.scrollWidth > canvas.clientWidth) {
+          const svg = canvas.querySelector("svg");
+          if (svg) {
+            const noteX = Number(activeNoteEl.getAttribute("data-x") || 0);
+            const scaledX = (noteX / 880) * svg.getBoundingClientRect().width;
+            if (scaledX < canvas.scrollLeft + 40 || scaledX > canvas.scrollLeft + canvas.clientWidth - 40) {
+              canvas.scrollTo({ left: Math.max(0, scaledX - canvas.clientWidth / 2), behavior: "smooth" });
+            }
+          }
+        }
+      }
+
+      if (status) {
+        status.textContent = `Measure ${this.activeMeasure} / ${this.scoreModel.totalMeasures}`;
+      }
+      if (pitchWrap && pitchReadout) {
+        if (this.activeNoteGlobalIndex >= 0 && this.activePitch) {
+          pitchWrap.setAttribute("data-live", "true");
+          pitchReadout.textContent =
+            this.activeFrequencyHz > 0 ? `${this.activePitch} · ${Math.round(this.activeFrequencyHz)} Hz` : this.activePitch;
+        } else {
+          pitchWrap.setAttribute("data-live", "false");
+          pitchReadout.textContent = "Click any note";
+        }
       }
     }
 
     renderCanvas() {
       const canvas = this.shadowRoot.querySelector("[data-canvas]");
-      const status = this.shadowRoot.querySelector("[data-measure-status]");
       if (canvas) {
         canvas.innerHTML = renderScoreToSVG(this.scoreModel, {
           activeMeasure: this.activeMeasure,
           activeNoteGlobalIndex: this.activeNoteGlobalIndex
         });
       }
-      if (status) {
-        status.textContent = `Measure ${this.activeMeasure} / ${this.scoreModel.totalMeasures}`;
-      }
+      this.updatePlaybackHighlight();
     }
   }
 
   customElements.define("linnet-score-player", LinnetScorePlayerElement);
 }
-

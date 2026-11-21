@@ -36,5 +36,9 @@ test("S-05 & D-03: renderScoreToSVG engraves #FAF6F0 Warm Alabaster canvas, #1C1
   assert.ok(svg.includes("#1B3B2B"), "Should use Lush Cypress for active playback cursor");
   assert.ok(svg.includes("Chillax"), "Should use Chillax display font in engraved SVG title");
   assert.ok(svg.includes("Nocturne in E-Flat Major"), "Should engrave score title");
+  assert.ok(svg.includes('data-x='), "Should emit data-x coordinates for smooth cursor translation");
+  assert.ok(svg.includes('data-pitch='), "Should emit data-pitch metadata for live pitch readout");
+  assert.ok(svg.includes('role="button"'), "Should mark playable notes as interactive buttons");
+  assert.ok(svg.includes("linnet-playback-cursor"), "Should render playback cursor element");
 });
 

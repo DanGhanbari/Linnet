@@ -1,6 +1,6 @@
 /**
- * Linnet Score — SVG Score Engraver (Deliverable S-05 & Decision D-03)
- * Renders parsed MusicXML into a responsive, zoomable SVG score sheet using
+ * Linnet Score — SVG Score Engraver
+ * Renders parsed MusicXML into an interactive, zoomable SVG score sheet using
  * the "Lush & Nude" palette (#FAF6F0 Warm Alabaster canvas, #1C1917 Espresso Obsidian staves/notes,
  * #1B3B2B Lush Cypress playback cursor).
  */
@@ -13,6 +13,12 @@ function escapeXml(str) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function formatPitchLabel(note) {
+  if (note.isRest || !note.step) return "Rest";
+  const acc = note.alter === 1 ? "♯" : note.alter === -1 ? "♭" : "";
+  return `${note.step}${acc}${note.octave}`;
 }
 
 /**
@@ -55,9 +61,7 @@ export function renderScoreToSVG(scoreModel, { activeMeasure = 1, activeNoteGlob
       const mEndX = mStartX + measureWidth;
       const isMeasureActive = measure.measureNumber === activeMeasure;
 
-      const highlightRect = isMeasureActive
-        ? `<rect x="${mStartX}" y="${staffTop - 18}" width="${measureWidth}" height="${lineSpacing * 4 + 36}" rx="6" fill="#2E5A44" fill-opacity="0.08" />`
-        : "";
+      const highlightRect = `<rect class="measure-highlight" x="${mStartX}" y="${staffTop - 18}" width="${measureWidth}" height="${lineSpacing * 4 + 36}" rx="6" />`;
 
       const chordSvg = measure.chordSymbols
         .map(
@@ -79,6 +83,8 @@ export function renderScoreToSVG(scoreModel, { activeMeasure = 1, activeNoteGlob
             cursorX = nx;
           }
 
+          const pitchLabel = formatPitchLabel(note);
+          const freqVal = note.isRest ? 0 : note.frequencyHz || 0;
           const noteColor = isNoteActive ? "#1B3B2B" : "#1C1917";
           const noteRadiusX = 6.2;
           const noteRadiusY = 4.6;
@@ -96,27 +102,27 @@ export function renderScoreToSVG(scoreModel, { activeMeasure = 1, activeNoteGlob
             ledgerSvg = `<line x1="${nx - 10}" y1="${staffTop - lineSpacing}" x2="${nx + 10}" y2="${staffTop - lineSpacing}" stroke="#1C1917" stroke-width="1.3" />`;
           }
 
-          // Accidental symbol
           const accidentalSymbol = note.alter === 1 ? "♯" : note.alter === -1 ? "♭" : "";
           const accidentalSvg = accidentalSymbol
             ? `<text x="${nx - 16}" y="${ny + 4}" font-family="serif" font-size="14" fill="${noteColor}">${accidentalSymbol}</text>`
             : "";
 
           const lyricSvg = note.lyricText
-            ? `<text x="${nx}" y="${staffTop + 66}" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" fill="#655B52">${escapeXml(note.lyricText)}</text>`
+            ? `<text x="${nx}" y="${staffTop + 66}" text-anchor="middle" font-family="'Figtree', sans-serif" font-size="11" fill="#655B52">${escapeXml(note.lyricText)}</text>`
             : "";
 
-          const activeHalo = isNoteActive
-            ? `<circle cx="${nx}" cy="${ny}" r="11" fill="#2E5A44" fill-opacity="0.22" />`
-            : "";
+          const interactiveAttrs = note.isRest
+            ? `role="presentation"`
+            : `tabindex="0" role="button" aria-label="Play ${escapeXml(pitchLabel)} in measure ${measure.measureNumber}"`;
 
-          return `<g class="linnet-note" data-measure="${measure.measureNumber}" data-note-index="${currentGlobalIdx}">
-        ${activeHalo}
+          return `<g class="linnet-note${isNoteActive ? " is-active" : ""}" data-measure="${measure.measureNumber}" data-note-index="${currentGlobalIdx}" data-x="${nx.toFixed(1)}" data-pitch="${escapeXml(pitchLabel)}" data-freq="${freqVal}" ${interactiveAttrs}>
+        <circle class="note-halo" cx="${nx}" cy="${ny}" r="12" />
         ${ledgerSvg}
         ${accidentalSvg}
         <ellipse cx="${nx}" cy="${ny}" rx="${noteRadiusX}" ry="${noteRadiusY}" transform="rotate(-18 ${nx} ${ny})" fill="${isHollow ? "#FAF6F0" : noteColor}" stroke="${noteColor}" stroke-width="1.8" />
         ${hasStem ? `<line x1="${stemX}" y1="${ny}" x2="${stemX}" y2="${stemY2}" stroke="${noteColor}" stroke-width="1.6" />` : ""}
         ${lyricSvg}
+        <rect class="note-hit" x="${(nx - 12).toFixed(1)}" y="${(ny - 18).toFixed(1)}" width="24" height="36" rx="6" fill="transparent" />
       </g>`;
         })
         .join("\n      ");
@@ -124,7 +130,7 @@ export function renderScoreToSVG(scoreModel, { activeMeasure = 1, activeNoteGlob
       const barlineSvg = `<line x1="${mEndX}" y1="${staffTop}" x2="${mEndX}" y2="${staffTop + 4 * lineSpacing}" stroke="#1C1917" stroke-width="${mIdx === measureCount - 1 ? "2.6" : "1.3"}" />`;
       const measureNumSvg = `<text x="${mStartX + 4}" y="${staffTop - 8}" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#655B52">${measure.measureNumber}</text>`;
 
-      return `<g class="linnet-measure" data-measure-number="${measure.measureNumber}">
+      return `<g class="linnet-measure${isMeasureActive ? " is-active" : ""}" data-measure-number="${measure.measureNumber}">
       ${highlightRect}
       ${measureNumSvg}
       ${chordSvg}
@@ -160,8 +166,7 @@ export function renderScoreToSVG(scoreModel, { activeMeasure = 1, activeNoteGlob
     ${measuresSvg}
   </g>
 
-  <!-- Animated Lush Cypress Playback Cursor -->
-  <line class="linnet-playback-cursor" x1="${cursorX}" y1="${staffTop - 16}" x2="${cursorX}" y2="${staffTop + 4 * lineSpacing + 16}" stroke="#1B3B2B" stroke-width="2.2" stroke-dasharray="3,2" opacity="${activeNoteGlobalIndex >= 0 ? "0.95" : "0.35"}" />
+  <!-- Smooth Gliding Lush Cypress Playback Cursor -->
+  <line class="linnet-playback-cursor" x1="0" y1="${staffTop - 16}" x2="0" y2="${staffTop + 4 * lineSpacing + 16}" stroke="#1B3B2B" stroke-width="2.2" stroke-dasharray="3,2" data-default-x="${(staffLeft + 74).toFixed(1)}" data-active="${activeNoteGlobalIndex >= 0 ? "true" : "false"}" style="transform: translateX(${cursorX.toFixed(1)}px)" />
 </svg>`;
 }
-
